@@ -1,0 +1,185 @@
+package service
+
+import (
+	"encoding/json"
+	"fmt"
+	"net/url"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+	"unicode/utf8"
+
+	"github.com/google/uuid"
+
+	"devtoolbox/internal/model"
+)
+
+const connFile = "db_conns.json"
+
+// ConnStore 负责将数据库连接配置持久化到本地 JSON 文件
+type ConnStore struct {
+	mu   sync.RWMutex
+	path string
+}
+
+func NewConnStore() *ConnStore {
+	exe, err := os.Executable()
+	dir := "."
+	if err == nil {
+		dir = filepath.Dir(exe)
+	}
+	return &ConnStore{path: filepath.Join(dir, connFile)}
+}
+
+// List 返回所有已保存的连接，按保存时间倒序（最新在前）
+func (s *ConnStore) List() ([]model.DBConn, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.load()
+}
+
+// ListDB 返回非 Redis 的数据库连接列表（业务过滤在 service 层）
+func (s *ConnStore) ListDB() ([]model.DBConn, error) {
+	all, err := s.List()
+	if err != nil {
+		return nil, err
+	}
+	result := make([]model.DBConn, 0, len(all))
+	for _, c := range all {
+		if c.Type != "redis" {
+			result = append(result, c)
+		}
+	}
+	return result, nil
+}
+
+// ListByType 返回指定 type 的连接列表
+func (s *ConnStore) ListByType(connType string) ([]model.DBConn, error) {
+	all, err := s.List()
+	if err != nil {
+		return nil, err
+	}
+	result := make([]model.DBConn, 0)
+	for _, c := range all {
+		if c.Type == connType {
+			result = append(result, c)
+		}
+	}
+	return result, nil
+}
+
+// Save 保存一条连接；若已存在相同 type+DSN 则直接返回，不重复写入
+func (s *ConnStore) Save(dbType, dsn string) (model.DBConn, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	conns, err := s.load()
+	if err != nil {
+		return model.DBConn{}, err
+	}
+
+	// 去重：同 type + DSN 已存在则直接返回
+	for _, c := range conns {
+		if c.Type == dbType && c.DSN == dsn {
+			return c, nil
+		}
+	}
+
+	conn := model.DBConn{
+		ID:   uuid.New().String(), // M-4: 使用 uuid 替换时间戳，避免并发碰撞
+		Name: buildName(dbType, dsn),
+		Type: dbType,
+		DSN:  dsn,
+	}
+	conns = append([]model.DBConn{conn}, conns...)
+	return conn, s.write(conns)
+}
+
+// Delete 按 ID 删除一条连接
+func (s *ConnStore) Delete(id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	conns, err := s.load()
+	if err != nil {
+		return err
+	}
+	filtered := conns[:0]
+	for _, c := range conns {
+		if c.ID != id {
+			filtered = append(filtered, c)
+		}
+	}
+	return s.write(filtered)
+}
+
+// ── 内部方法 ──────────────────────────────────────────────────
+
+func (s *ConnStore) load() ([]model.DBConn, error) {
+	data, err := os.ReadFile(s.path)
+	if os.IsNotExist(err) {
+		return []model.DBConn{}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var conns []model.DBConn
+	if err := json.Unmarshal(data, &conns); err != nil {
+		return nil, err
+	}
+	return conns, nil
+}
+
+func (s *ConnStore) write(conns []model.DBConn) error {
+	data, err := json.MarshalIndent(conns, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(s.path, data, 0644)
+}
+
+// buildName 从 DSN 提取人类可读的展示名
+func buildName(dbType, dsn string) string {
+	switch dbType {
+	case "mysql":
+		// root:pass@tcp(host:port)/dbname
+		at := strings.LastIndex(dsn, "@") // L-1: 使用标准库替换手写 lastIndex
+		slash := strings.LastIndex(dsn, "/")
+		if at >= 0 && slash > at {
+			host := dsn[at+1 : slash]
+			db := dsn[slash+1:]
+			if strings.HasPrefix(host, "tcp(") {
+				host = host[4 : len(host)-1]
+			}
+			return fmt.Sprintf("mysql@%s/%s", host, db)
+		}
+	case "postgres":
+		return fmt.Sprintf("pg@%s", truncate(dsn, 40))
+	case "sqlite3":
+		return fmt.Sprintf("sqlite:%s", filepath.Base(dsn))
+	case "redis":
+		// addr?db=N[&password=xxx]  →  redis@addr/dbN
+		q := strings.Index(dsn, "?")
+		addr := dsn
+		dbNum := "0"
+		if q >= 0 {
+			addr = dsn[:q]
+			if v, err := url.ParseQuery(dsn[q+1:]); err == nil {
+				if d := v.Get("db"); d != "" {
+					dbNum = d
+				}
+			}
+		}
+		return fmt.Sprintf("redis@%s/db%s", addr, dbNum)
+	}
+	return fmt.Sprintf("%s:%s", dbType, truncate(dsn, 40))
+}
+
+// truncate 按 Unicode 字符数截断，避免多字节字符（中文/emoji）截断乱码 (L-9)
+func truncate(s string, max int) string {
+	if utf8.RuneCountInString(s) <= max {
+		return s
+	}
+	return string([]rune(s)[:max]) + "…"
+}

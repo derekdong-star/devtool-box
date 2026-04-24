@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DevToolbox</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='url(%23g)'/%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%237c3aed'/%3E%3Cstop offset='100%25' stop-color='%23ec4899'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M9 11.5a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-4.3 4.3a2 2 0 0 0 2.8 2.8l4.3-4.3a6 6 0 0 1 7.9-7.9l-3.8 3.8a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 1 1-1.2 6.6' stroke='none' fill='white' transform='translate(4,4) scale(0.75)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+
+<!-- ══ Sidebar ═══════════════════════════════════════════════ -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <div class="sidebar-logo-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+      </svg>
+    </div>
+    <div>
+      <div class="sidebar-logo-text">DevToolbox</div>
+      <div class="sidebar-logo-sub">后端开发工具箱</div>
+    </div>
+  </div>
+
+  <div class="nav">
+    <div class="nav-item active" data-target="db" data-desc="MySQL / PostgreSQL / SQLite 查询">
+      <div class="nav-item-icon">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <ellipse cx="12" cy="5" rx="9" ry="3"/>
+          <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+          <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+        </svg>
+      </div>
+      数据库查询
+    </div>
+    <div class="nav-item" data-target="redis" data-desc="Redis 连接、Key 查询、命令执行">
+      <div class="nav-item-icon">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/><line x1="16" y1="8" x2="2" y2="22"/><line x1="17.5" y1="15" x2="9" y2="15"/>
+        </svg>
+      </div>
+      Redis 查询
+    </div>
+    <div class="nav-item" data-target="cookie" data-desc="Cookie 字段解析、Session 解析">
+      <div class="nav-item-icon">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/>
+        </svg>
+      </div>
+      Cookie 解析
+    </div>
+    <div class="nav-item" data-target="jwt" data-desc="JWT Token 解码，查看 Header / Payload">
+      <div class="nav-item-icon">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+      </div>
+      JWT 解析
+    </div>
+    <div class="nav-item" data-target="json" data-desc="JSON 格式化、压缩、转义">
+      <div class="nav-item-icon">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="m10 14 2-2-2-2M14 10l2 2-2 2"/>
+          <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3m13-5v3a2 2 0 0 0-2 2h-3"/>
+        </svg>
+      </div>
+      JSON 工具
+    </div>
+    <div class="nav-item" data-target="codec" data-desc="Base64、URL 编解码">
+      <div class="nav-item-icon">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 7V4h16v3M9 20H4v-3M15 20h5v-3M12 4v16"/>
+        </svg>
+      </div>
+      编码转换
+    </div>
+    <div class="nav-item" data-target="time" data-desc="时间戳转换、UUID 生成">
+      <div class="nav-item-icon">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+        </svg>
+      </div>
+      时间 / UUID
+    </div>
+  </div>
+</nav>
+
+<!-- ══ Main ═══════════════════════════════════════════════════ -->
+<div class="main">
+  <div class="topbar">
+    <span class="topbar-title" id="pageTitle">数据库查询</span>
+    <div class="topbar-divider"></div>
+    <span class="topbar-desc" id="pageDesc">MySQL / PostgreSQL / SQLite 查询</span>
+  </div>
+
+  <div class="content">
+
+    <!-- ── Redis ─────────────────────────────────────────────── -->
+    <div class="panel" id="redis">
+
+      <!-- 连接配置 -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon card-icon-pink">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/><line x1="16" y1="8" x2="2" y2="22"/><line x1="17.5" y1="15" x2="9" y2="15"/></svg>
+          </div>
+          <span class="card-title">Redis 连接</span>
+        </div>
+
+        <!-- 历史连接选择行 -->
+        <div class="db-connection-row" id="redisSavedRow" style="display:none">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;color:var(--text-tertiary)"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          <select id="redisSavedConns" onchange="applyRedisConn(this.value)" style="flex:1;min-width:0">
+            <option value="">— 选择已保存的连接 —</option>
+          </select>
+          <button class="btn btn-ghost" onclick="deleteRedisConn()" data-tooltip="删除当前选中连接" style="flex-shrink:0;color:var(--danger);padding:6px 8px">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          </button>
+        </div>
+
+        <!-- 手动输入行 -->
+        <div class="db-connection-row">
+          <input id="redisAddr" type="text" placeholder="host:port" value="127.0.0.1:6379" style="width:180px;flex:none" oninput="setConnectBtnState('redisPingBtn',false)">
+          <input id="redisPassword" type="password" placeholder="密码（可选）" style="width:140px;flex:none">
+          <input id="redisDB" type="number" placeholder="DB" value="0" style="width:70px;flex:none" min="0" max="15">
+          <button id="redisPingBtn" class="btn btn-primary" onclick="redisPing()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            连接
+          </button>
+          <span class="hint" id="redisConnHint" style="display:none">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            已连接并保存
+          </span>
+        </div>
+      </div>
+
+      <!-- 主体：左侧 Key 列表 + 右侧详情 -->
+      <div class="grid-2" style="flex:1">
+
+        <!-- 左侧：Key 搜索 + 列表 -->
+        <div class="card" style="min-height:0;overflow:hidden">
+          <div class="card-header">
+            <div class="card-icon card-icon-violet">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            </div>
+            <span class="card-title">Key 搜索</span>
+            <span id="redisKeyCount" style="margin-left:auto"></span>
+          </div>
+          <div class="db-connection-row" style="margin-bottom:0">
+            <input id="redisPattern" placeholder="前缀或 glob，如 user:* 或 *session*" style="flex:1" onkeydown="if(event.key==='Enter')redisSearchKeys()">
+            <button class="btn btn-primary" onclick="redisSearchKeys()" style="flex-shrink:0">搜索</button>
+          </div>
+          <div id="redisKeyList" class="db-table-list" style="flex:1;margin-top:4px">
+            <div class="empty-state">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <p>连接后输入前缀搜索 Key</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 右侧：Value 详情 + 命令执行 -->
+        <div class="db-detail-area">
+
+          <div class="db-tabs">
+            <button class="db-tab active" data-redistab="value" onclick="switchRedisTab('value')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+              Key 详情
+            </button>
+            <button class="db-tab" data-redistab="exec" onclick="switchRedisTab('exec')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+              命令执行
+            </button>
+            <span id="redisActiveKey" class="db-active-table-badge"></span>
+          </div>
+
+          <!-- Key 详情 Tab -->
+          <div class="card db-tab-panel active" id="redisTabValue">
+            <div id="redisValueResult" class="result-area" style="flex:1">
+              <div class="empty-state">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                <p>点击左侧 Key 查看详情</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- 命令执行 Tab -->
+          <div class="card db-tab-panel" id="redisTabExec">
+            <div class="card-header">
+              <div class="card-icon card-icon-amber">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+              </div>
+              <span class="card-title">命令</span>
+              <div class="sql-history-wrap" id="redisCmdHistoryWrap" style="display:none">
+                <button class="btn btn-ghost db-sql-history-btn" onclick="toggleRedisCmdHistory()" data-tooltip="历史命令">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  历史
+                </button>
+                <div class="sql-history-dropdown" id="redisCmdHistoryDropdown"></div>
+              </div>
+              <button class="btn btn-primary" style="margin-left:8px;margin-top:0" onclick="redisExec()">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                执行
+              </button>
+            </div>
+            <textarea id="redisCommand" style="min-height:70px;max-height:160px;flex:none" placeholder="GET user:1&#10;HGETALL session:abc&#10;TTL token:xyz"></textarea>
+            <div class="card-header" style="margin-top:4px">
+              <div class="card-icon card-icon-emerald">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+              </div>
+              <span class="card-title">执行结果</span>
+            </div>
+            <div id="redisExecResult" class="result-area" style="flex:1">
+              <div class="empty-state">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+                <p>输入命令后点击执行</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Cookie / JWT / Session ──────────────────────────── -->
+    <div class="panel" id="cookie">
+
+      <div class="grid-2">
+        <!-- Cookie Input -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon card-icon-violet">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>
+            </div>
+            <span class="card-title">Cookie 字符串</span>
+          </div>
+          <textarea id="cookieInput" placeholder="粘贴 Cookie 字符串，如：session=abc; user_id=123; token=xyz"></textarea>
+          <div class="toolbar">
+            <button class="btn btn-primary" onclick="parseCookie()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>
+              解析
+            </button>
+            <span class="hint">支持 <code>;</code> 和 <code>&amp;</code> 分隔</span>
+          </div>
+        </div>
+        <!-- Cookie Result -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon card-icon-emerald">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            </div>
+            <span class="card-title">解析结果</span>
+          </div>
+          <div id="cookieResult" class="result-area">
+            <div class="empty-state">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/></svg>
+              <p>粘贴 Cookie 后点击解析</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <!-- Session Input -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon card-icon-cyan">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            </div>
+            <span class="card-title">Session 解析</span>
+            <span class="badge badge-neutral" style="margin-left:auto;font-size:10px">gorilla/securecookie</span>
+          </div>
+          <textarea id="sessionInput" style="min-height:80px;max-height:120px" placeholder="粘贴完整 Cookie 字符串（含 session=...）"></textarea>
+
+          <!-- 历史 Secret 下拉（有历史时才显示） -->
+          <div id="secretHistoryRow" style="display:none" class="toolbar">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;color:var(--text-tertiary)">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+            <select id="secretHistorySelect" onchange="applySecretHistory(this.value)" style="flex:1;min-width:0">
+              <option value="">— 选择已保存的 Secret —</option>
+            </select>
+            <button class="btn btn-ghost" onclick="deleteSecretHistory()" data-tooltip="删除当前选中" style="flex-shrink:0;color:var(--danger);padding:6px 8px">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+            </button>
+          </div>
+
+          <!-- 手动输入行 -->
+          <div class="toolbar">
+            <input id="sessionSecret" type="password" placeholder="SESSION_SECRET（可选，留空则跳过验签）" style="flex:1;min-width:0">
+            <button class="btn btn-primary" onclick="parseSession()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>
+              解析
+            </button>
+          </div>
+          <span class="hint">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            成功解析后 Secret 自动保存，下次可直接选择
+          </span>
+        </div>
+        <!-- Session Result -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon card-icon-emerald">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            </div>
+            <span class="card-title">Session 字段</span>
+          </div>
+          <div id="sessionResult" class="result-area">
+            <div class="empty-state">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+              <p>解析 session 字段内容</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── JWT ──────────────────────────────────────────────── -->
+    <div class="panel" id="jwt">
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon card-icon-pink">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <span class="card-title">JWT Token</span>
+          </div>
+          <textarea id="jwtInput" placeholder="粘贴 JWT Token：eyJhbGciOiJIUzI1NiIs..."></textarea>
+          <div class="toolbar">
+            <button class="btn btn-primary" onclick="parseJWT()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>
+              解码
+            </button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon card-icon-emerald">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            </div>
+            <span class="card-title">JWT 内容</span>
+          </div>
+          <div id="jwtResult" class="result-area">
+            <div class="empty-state">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <p>粘贴 JWT 后点击解码</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── JSON ──────────────────────────────────────────────── -->
+    <div class="panel" id="json">
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon card-icon-amber">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m10 14 2-2-2-2M14 10l2 2-2 2"/><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3m13-5v3a2 2 0 0 0-2 2h-3"/></svg>
+            </div>
+            <span class="card-title">输入 JSON</span>
+          </div>
+          <textarea id="jsonInput" placeholder='{"key": "value", "nested": {"a": 1}}'></textarea>
+          <div class="toolbar">
+            <button class="btn btn-primary"   onclick="formatJSON('format')">格式化</button>
+            <button class="btn btn-secondary" onclick="formatJSON('compact')">压缩</button>
+            <button class="btn btn-secondary" onclick="formatJSON('escape')">转义</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon card-icon-emerald">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            </div>
+            <span class="card-title">结果</span>
+          </div>
+          <textarea id="jsonResult" readonly placeholder="结果将显示在这里"></textarea>
+          <button class="btn btn-secondary btn-full" id="copyJsonBtn" onclick="copyText('jsonResult','copyJsonBtn')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            复制结果
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Codec ─────────────────────────────────────────────── -->
+    <div class="panel" id="codec">
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon card-icon-pink">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 7V4h16v3M9 20H4v-3M15 20h5v-3M12 4v16"/></svg>
+            </div>
+            <span class="card-title">输入</span>
+          </div>
+          <textarea id="codecInput" placeholder="输入要编码或解码的文本..."></textarea>
+          <div class="toolbar">
+            <button class="btn btn-primary"   onclick="codec('b64enc')">Base64 编码</button>
+            <button class="btn btn-secondary" onclick="codec('b64dec')">Base64 解码</button>
+          </div>
+          <div class="toolbar">
+            <button class="btn btn-primary"   onclick="codec('urlenc')">URL 编码</button>
+            <button class="btn btn-secondary" onclick="codec('urldec')">URL 解码</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon card-icon-emerald">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            </div>
+            <span class="card-title">结果</span>
+          </div>
+          <textarea id="codecResult" readonly placeholder="结果将显示在这里"></textarea>
+          <button class="btn btn-secondary btn-full" id="copyCodecBtn" onclick="copyText('codecResult','copyCodecBtn')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            复制结果
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── DB ────────────────────────────────────────────────── -->
+    <div class="panel active" id="db">
+
+      <!-- 连接配置行 -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon card-icon-cyan">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+          </div>
+          <span class="card-title">数据库连接</span>
+        </div>
+
+        <!-- 历史连接选择行 -->
+        <div class="db-connection-row" id="dbSavedRow" style="display:none">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;color:var(--text-tertiary)"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          <select id="dbSavedConns" onchange="applyConn(this.value)" style="flex:1;min-width:0">
+            <option value="">— 选择已保存的连接 —</option>
+          </select>
+          <button class="btn btn-ghost" onclick="deleteConn()" data-tooltip="删除当前选中连接" style="flex-shrink:0;color:var(--danger);padding:6px 8px">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          </button>
+        </div>
+
+        <!-- 手动输入行 -->
+        <div class="db-connection-row">
+          <select id="dbType">
+            <option value="mysql">MySQL</option>
+            <option value="postgres">PostgreSQL</option>
+            <option value="sqlite3">SQLite</option>
+          </select>
+          <input id="dbDsn" type="text" placeholder="DSN 连接字符串" value="root:root@tcp(127.0.0.1:3306)/test" style="flex:1" oninput="setConnectBtnState('dbConnectBtn',false)">
+          <button id="dbConnectBtn" class="btn btn-primary" onclick="loadTables()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            连接
+          </button>
+        </div>
+        <span class="hint" id="dbConnHint" style="display:none">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          连接成功后已自动保存
+        </span>
+      </div>
+
+      <!-- 主体：三栏 全部表 | 历史表 | 详情 -->
+      <div class="db-workspace">
+
+        <!-- 第一列：全部数据表 -->
+        <div class="card db-table-list-card">
+          <div class="card-header">
+            <div class="card-icon card-icon-violet">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+            </div>
+            <span class="card-title">全部数据表</span>
+            <span id="dbTableCount" style="margin-left:auto"></span>
+          </div>
+          <input id="dbTableSearch" placeholder="搜索表名..." oninput="filterTables()" style="flex:none">
+          <div id="dbTableList" class="db-table-list">
+            <div class="empty-state">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+              <p>连接数据库后显示</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 第二列：历史查询表 -->
+        <div class="card db-table-list-card">
+          <div class="card-header">
+            <div class="card-icon card-icon-pink">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <span class="card-title">历史查询表</span>
+            <button class="btn btn-ghost" onclick="clearRecentTables()" data-tooltip="清空历史" style="margin-left:auto;padding:3px 5px;height:auto">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/></svg>
+            </button>
+          </div>
+          <div id="dbRecentTableList" class="db-table-list">
+            <div class="empty-state">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <p>点击过的表会记录在此</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 第三列：表结构 + SQL 查询 -->
+        <div class="db-detail-area">
+
+          <!-- Tab 切换 -->
+          <div class="db-tabs">
+            <button class="db-tab active" data-dbtab="structure" onclick="switchDbTab('structure')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
+              表结构
+            </button>
+            <button class="db-tab" data-dbtab="query" onclick="switchDbTab('query')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+              SQL 查询
+            </button>
+            <span id="dbActiveTable" class="db-active-table-badge"></span>
+          </div>
+
+          <!-- 表结构 Tab -->
+          <div class="card db-tab-panel active" id="dbTabStructure">
+            <div id="dbStructureResult" class="result-area" style="flex:1">
+              <div class="empty-state">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
+                <p>从左侧点击表名查看结构</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- SQL 查询 Tab -->
+          <div class="card db-tab-panel" id="dbTabQuery">
+            <div class="card-header">
+              <div class="card-icon card-icon-amber">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+              </div>
+              <span class="card-title">SQL</span>
+              <!-- 历史命令选择器 -->
+              <div class="sql-history-wrap" id="sqlHistoryWrap" style="display:none">
+                <button class="btn btn-ghost db-sql-history-btn" onclick="toggleSqlHistory()" data-tooltip="历史命令">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  历史
+                </button>
+                <div class="sql-history-dropdown" id="sqlHistoryDropdown"></div>
+              </div>
+              <button class="btn btn-primary" style="margin-left:8px;margin-top:0" onclick="queryDB()">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                执行
+              </button>
+            </div>
+            <textarea id="dbQuery" style="min-height:90px;max-height:200px;flex:none" placeholder="SELECT * FROM user WHERE id = 1 LIMIT 10"></textarea>
+            <div class="card-header" style="margin-top:4px">
+              <div class="card-icon card-icon-emerald">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+              </div>
+              <span class="card-title">查询结果</span>
+              <span id="dbRowCount" style="margin-left:auto"></span>
+            </div>
+            <div id="dbResult" class="result-area" style="flex:1">
+              <div class="empty-state">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                <p>输入 SQL 后点击执行</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Time / UUID ───────────────────────────────────────── -->
+    <div class="panel" id="time">
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon card-icon-violet">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <span class="card-title">当前时间</span>
+            <span class="badge" id="nowBadge" style="margin-left:auto;font-size:10px">--</span>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="color:var(--text-tertiary);font-size:12px;width:72px;flex-shrink:0">Unix 秒</span>
+              <input id="tsSec" class="mono" readonly style="flex:1" placeholder="--">
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="color:var(--text-tertiary);font-size:12px;width:72px;flex-shrink:0">Unix 毫秒</span>
+              <input id="tsMs" class="mono" readonly style="flex:1" placeholder="--">
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="color:var(--text-tertiary);font-size:12px;width:72px;flex-shrink:0">RFC3339</span>
+              <input id="tsRFC" class="mono" readonly style="flex:1" placeholder="--">
+            </div>
+          </div>
+
+          <button class="btn btn-secondary" onclick="refreshTime()" style="align-self:flex-start">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+            刷新
+          </button>
+
+          <div style="border-top:1.5px solid var(--border);padding-top:12px;display:flex;flex-direction:column;gap:8px">
+            <span style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px">时间戳转换</span>
+            <div style="display:flex;gap:8px">
+              <input id="tsInput" placeholder="输入秒或毫秒时间戳" style="flex:1">
+              <button class="btn btn-primary" onclick="convertTs()">转换</button>
+            </div>
+            <div id="tsResult" class="hint"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon card-icon-pink">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="2" width="9" height="9"/><rect x="13" y="2" width="9" height="9"/><rect x="2" y="13" width="9" height="9"/><rect x="13" y="13" width="9" height="9"/></svg>
+            </div>
+            <span class="card-title">UUID 生成</span>
+          </div>
+          <button class="btn btn-primary" onclick="genUUID()" style="align-self:flex-start">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12l7-7 7 7"/></svg>
+            生成 5 个
+          </button>
+          <textarea id="uuidResult" readonly style="min-height:160px" placeholder="UUID 将显示在这里，每行一个"></textarea>
+          <button class="btn btn-secondary btn-full" id="copyUuidBtn" onclick="copyText('uuidResult','copyUuidBtn')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            复制全部
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>

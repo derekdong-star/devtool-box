@@ -131,3 +131,25 @@ type RedisValueResp struct {
 	TTL   int64       `json:"ttl"`
 	Value interface{} `json:"value"`
 }
+
+// ── 命令模板 ───────────────────────────────────────────────────
+
+// CmdTemplate 保存的命令模板
+type CmdTemplate struct {
+	ID      string `json:"id"`      // uuid
+	Name    string `json:"name"`    // 用户起的名字
+	Command string `json:"command"` // 命令内容
+	Kind    string `json:"kind"`    // "sql" | "redis"
+}
+
+// CmdTemplateSaveReq 保存模板请求
+type CmdTemplateSaveReq struct {
+	Name    string `json:"name"`
+	Command string `json:"command"`
+	Kind    string `json:"kind"`
+}
+
+// CmdTemplateDeleteReq 删除模板请求
+type CmdTemplateDeleteReq struct {
+	ID string `json:"id"`
+}

@@ -67,9 +67,10 @@ navItems.forEach(item => {
     _activeTab = target;
     localStorage.setItem(ACTIVE_TAB_KEY, target);
 
-    // 切换面板时刷新对应历史连接
-    if (target === 'db')    loadSavedConns();
-    if (target === 'redis') loadRedisConns();
+    // 切换面板时刷新对应历史连接 / 模板
+    if (target === 'db')        loadSavedConns();
+    if (target === 'redis')     loadRedisConns();
+    if (target === 'templates') loadTemplates();
   });
 });
 
@@ -395,6 +396,67 @@ function clearRecentTables() {
   renderRecentTableList(type, dsn);
 }
 
+/* ─── 历史下拉 Portal（挂在 body，绕开 overflow:hidden）────────
+ *
+ *  原来把 dropdown 放在 .sql-history-wrap 内部，但祖先元素
+ *  .main 有 overflow:hidden，浏览器 hit-testing 会裁剪溢出区域，
+ *  导致点击事件根本无法派发到 dropdown 里的按钮。
+ *
+ *  解决方案：用一个 body 级别的 portal (#historyDropdownPortal)，
+ *  JS 动态计算触发按钮位置后将 dropdown 定位到正确坐标。
+ * ────────────────────────────────────────────────────────────── */
+
+let _hdPortalType = null; // 当前打开的是哪种历史：'sql' | 'redis'
+
+function _getPortal() { return document.getElementById('historyDropdownPortal'); }
+
+// 打开 portal 式历史下拉
+function _openHistoryPortal(anchorBtn, type, contentHtml) {
+  const portal = _getPortal();
+  portal.innerHTML = `<div class="sql-history-dropdown" style="display:block;position:static;width:480px;max-width:90vw;max-height:340px;overflow-y:auto">${contentHtml}</div>`;
+
+  // 定位：在锚点按钮下方，右对齐
+  const rect = anchorBtn.getBoundingClientRect();
+  const pw   = 480;
+  let left   = rect.right - pw;
+  if (left < 8) left = 8;
+  portal.style.left   = left + 'px';
+  portal.style.top    = (rect.bottom + 6) + 'px';
+  portal.style.display = 'block';
+  _hdPortalType = type;
+}
+
+function _closeHistoryPortal() {
+  _getPortal().style.display = 'none';
+  _hdPortalType = null;
+}
+
+// 点击 portal 内部阻止冒泡 + 事件委托处理历史条目操作
+_getPortal().addEventListener('click', e => {
+  e.stopPropagation();
+  const el = e.target.closest('[data-action]');
+  if (!el) return;
+  const action = el.dataset.action;
+  const sql    = el.dataset.sql;
+  const cmd    = el.dataset.cmd;
+  const kind   = el.dataset.kind;
+
+  if (action === 'apply-sql')         { applySqlHistory(sql); return; }
+  if (action === 'apply-redis')       { applyRedisCmdHistory(cmd); return; }
+  if (action === 'template')          { saveAsTemplate(cmd || sql, kind); return; }
+  if (action === 'delete-sql')        { deleteSqlHistory(sql); return; }
+  if (action === 'delete-redis')      { deleteRedisCmdHistory(cmd); return; }
+  if (action === 'clear-sql')         { clearSqlHistory(); return; }
+  if (action === 'clear-redis')       { clearRedisCmdHistory(); return; }
+  if (action === 'apply-template')    { applyTemplateDirect(kind, el.dataset.command); return; }
+  if (action === 'copy-template')     { copyString(el.dataset.command); showToast('已复制'); return; }
+  if (action === 'delete-template')   { deleteTemplateAndRefresh(el.dataset.id, kind); return; }
+});
+// 点击 portal 外部关闭（_hdPortalType 非空才关）
+document.addEventListener('click', (e) => {
+  if (_hdPortalType !== null) _closeHistoryPortal();
+});
+
 // ── 历史 SQL ────────────────────────────────────────────────────
 function loadSqlHistory() {
   try { return JSON.parse(localStorage.getItem(SQL_HISTORY_KEY) || '[]'); }
@@ -406,74 +468,71 @@ function pushSqlHistory(sql) {
     const list = loadSqlHistory().filter(h => h.sql !== sql);
     list.unshift({ sql, ts: Date.now() });
     localStorage.setItem(SQL_HISTORY_KEY, JSON.stringify(list.slice(0, MAX_SQL_HISTORY)));
-    renderSqlHistory();
-    // 有历史记录时显示按钮
+    // 有历史时显示触发按钮
     document.getElementById('sqlHistoryWrap').style.display = 'block';
+    // 若当前下拉开着则刷新
+    if (_hdPortalType === 'sql') _renderSqlHistoryContent();
   } catch {}
 }
 
-function deleteSqlHistory(sql, e) {
-  e.stopPropagation();
+function deleteSqlHistory(sql) {
   try {
     const list = loadSqlHistory().filter(h => h.sql !== sql);
     localStorage.setItem(SQL_HISTORY_KEY, JSON.stringify(list));
-    renderSqlHistory();
     if (!list.length) {
       document.getElementById('sqlHistoryWrap').style.display = 'none';
-      closeSqlHistory();
+      _closeHistoryPortal();
+    } else {
+      _renderSqlHistoryContent();
     }
   } catch {}
 }
 
 function clearSqlHistory() {
   localStorage.removeItem(SQL_HISTORY_KEY);
-  renderSqlHistory();
   document.getElementById('sqlHistoryWrap').style.display = 'none';
-  closeSqlHistory();
+  _closeHistoryPortal();
 }
 
 function applySqlHistory(sql) {
   document.getElementById('dbQuery').value = sql;
-  closeSqlHistory();
+  _closeHistoryPortal();
   switchDbTab('query');
 }
 
-function toggleSqlHistory() {
-  const dd = document.getElementById('sqlHistoryDropdown');
-  dd.classList.toggle('open');
-  if (dd.classList.contains('open')) renderSqlHistory();
+function toggleSqlHistory(e, btn) {
+  e.stopPropagation();
+  if (_hdPortalType === 'sql') { _closeHistoryPortal(); return; }
+  _closeHistoryPortal();
+  _renderSqlHistoryContent(btn);
 }
 
-function closeSqlHistory() {
-  document.getElementById('sqlHistoryDropdown').classList.remove('open');
-}
+function closeSqlHistory() { if (_hdPortalType === 'sql') _closeHistoryPortal(); }
 
-function renderSqlHistory() {
+function _renderSqlHistoryContent(anchorBtn) {
   const list = loadSqlHistory();
-  const dd   = document.getElementById('sqlHistoryDropdown');
-  if (!list.length) {
-    dd.innerHTML = '<div class="sql-history-empty">暂无历史记录</div>';
-    return;
-  }
-  dd.innerHTML = list.map(h => `
-    <div class="sql-history-item" onclick="applySqlHistory(${JSON.stringify(h.sql)})">
-      <span class="sql-history-item-sql" title="${esc(h.sql)}">${esc(h.sql)}</span>
-      <span class="sql-history-item-del" onclick="deleteSqlHistory(${JSON.stringify(h.sql)}, event)" title="删除">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
-      </span>
-    </div>`).join('') +
-    `<div class="sql-history-footer">
-      <button class="btn btn-ghost" onclick="clearSqlHistory()" style="font-size:11px;height:26px;padding:0 8px;color:var(--danger)">
-        清空全部
-      </button>
-    </div>`;
-}
+  const anchor = anchorBtn || document.getElementById('sqlHistoryWrap')?.querySelector('button');
 
-// 点击外部关闭历史下拉
-document.addEventListener('click', e => {
-  const wrap = document.getElementById('sqlHistoryWrap');
-  if (wrap && !wrap.contains(e.target)) closeSqlHistory();
-});
+  let html = '';
+  if (!list.length) {
+    html = '<div class="sql-history-empty">暂无历史记录</div>';
+  } else {
+    html = list.map(h => `
+      <div class="sql-history-item" data-action="apply-sql" data-sql="${esc(h.sql)}">
+        <span class="sql-history-item-sql" title="${esc(h.sql)}">${esc(h.sql)}</span>
+        <span class="sql-history-item-save" data-action="template" data-sql="${esc(h.sql)}" data-kind="sql" title="存为模板">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </span>
+        <span class="sql-history-item-del" data-action="delete-sql" data-sql="${esc(h.sql)}" title="删除">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </span>
+      </div>`).join('') +
+      `<div class="sql-history-footer">
+        <button class="btn btn-ghost" data-action="clear-sql" style="font-size:11px;height:26px;padding:0 8px;color:var(--danger)">清空全部</button>
+      </div>`;
+  }
+  if (anchor) _openHistoryPortal(anchor, 'sql', html);
+}
 
 // 初始化：如果已有历史则显示按钮
 (function initSqlHistory() {
@@ -907,7 +966,7 @@ function switchRedisTab(tab) {
   document.getElementById('redisTabExec').classList.toggle('active',  tab === 'exec');
 }
 
-// ── Redis 命令历史（同 SQL 历史，独立 key）──────────────────────
+// ── Redis 命令历史 ───────────────────────────────────────────────
 function loadRedisCmdHistory() {
   try { return JSON.parse(localStorage.getItem(REDIS_CMD_HISTORY_KEY) || '[]'); }
   catch { return []; }
@@ -918,71 +977,275 @@ function pushRedisCmdHistory(cmd) {
     const list = loadRedisCmdHistory().filter(h => h.cmd !== cmd);
     list.unshift({ cmd, ts: Date.now() });
     localStorage.setItem(REDIS_CMD_HISTORY_KEY, JSON.stringify(list.slice(0, MAX_REDIS_CMD_HISTORY)));
-    renderRedisCmdHistory();
-    document.getElementById('redisCmdHistoryWrap').style.display = 'block';
+    if (_hdPortalType === 'redis') _renderRedisCmdHistoryContent();
   } catch {}
 }
 
-function deleteRedisCmdHistory(cmd, e) {
-  e.stopPropagation();
+function deleteRedisCmdHistory(cmd) {
   try {
     const list = loadRedisCmdHistory().filter(h => h.cmd !== cmd);
     localStorage.setItem(REDIS_CMD_HISTORY_KEY, JSON.stringify(list));
-    renderRedisCmdHistory();
-    if (!list.length) { document.getElementById('redisCmdHistoryWrap').style.display = 'none'; closeRedisCmdHistory(); }
+    if (!list.length) {
+      _closeHistoryPortal();
+    } else {
+      _renderRedisCmdHistoryContent();
+    }
   } catch {}
 }
 
 function clearRedisCmdHistory() {
   localStorage.removeItem(REDIS_CMD_HISTORY_KEY);
-  document.getElementById('redisCmdHistoryWrap').style.display = 'none';
-  closeRedisCmdHistory();
+  _closeHistoryPortal();
 }
 
 function applyRedisCmdHistory(cmd) {
   document.getElementById('redisCommand').value = cmd;
-  closeRedisCmdHistory();
+  _closeHistoryPortal();
   switchRedisTab('exec');
 }
 
-function toggleRedisCmdHistory() {
-  const dd = document.getElementById('redisCmdHistoryDropdown');
-  dd.classList.toggle('open');
-  if (dd.classList.contains('open')) renderRedisCmdHistory();
+function toggleRedisCmdHistory(e, btn) {
+  e.stopPropagation();
+  if (_hdPortalType === 'redis') { _closeHistoryPortal(); return; }
+  _closeHistoryPortal();
+  _renderRedisCmdHistoryContent(btn);
 }
 
-function closeRedisCmdHistory() {
-  document.getElementById('redisCmdHistoryDropdown').classList.remove('open');
+function closeRedisCmdHistory() { if (_hdPortalType === 'redis') _closeHistoryPortal(); }
+
+function _renderRedisCmdHistoryContent(anchorBtn) {
+  const list   = loadRedisCmdHistory();
+  const anchor = anchorBtn || document.getElementById('redisCmdHistoryWrap')?.querySelector('button');
+
+  let html = '';
+  if (!list.length) {
+    html = '<div class="sql-history-empty">暂无历史记录</div>';
+  } else {
+    html = list.map(h => `
+      <div class="sql-history-item" data-action="apply-redis" data-cmd="${esc(h.cmd)}">
+        <span class="sql-history-item-sql" title="${esc(h.cmd)}">${esc(h.cmd)}</span>
+        <span class="sql-history-item-save" data-action="template" data-cmd="${esc(h.cmd)}" data-kind="redis" title="存为模板">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </span>
+        <span class="sql-history-item-del" data-action="delete-redis" data-cmd="${esc(h.cmd)}" title="删除">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </span>
+      </div>`).join('') +
+      `<div class="sql-history-footer">
+        <button class="btn btn-ghost" data-action="clear-redis" style="font-size:11px;height:26px;padding:0 8px;color:var(--danger)">清空全部</button>
+      </div>`;
+  }
+  if (anchor) _openHistoryPortal(anchor, 'redis', html);
 }
 
-function renderRedisCmdHistory() {
-  const list = loadRedisCmdHistory();
-  const dd   = document.getElementById('redisCmdHistoryDropdown');
-  if (!list.length) { dd.innerHTML = '<div class="sql-history-empty">暂无历史记录</div>'; return; }
-  dd.innerHTML = list.map(h => `
-    <div class="sql-history-item" onclick="applyRedisCmdHistory(${JSON.stringify(h.cmd)})">
-      <span class="sql-history-item-sql" title="${esc(h.cmd)}">${esc(h.cmd)}</span>
-      <span class="sql-history-item-del" onclick="deleteRedisCmdHistory(${JSON.stringify(h.cmd)}, event)">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
-      </span>
-    </div>`).join('') +
-    `<div class="sql-history-footer">
-      <button class="btn btn-ghost" onclick="clearRedisCmdHistory()" style="font-size:11px;height:26px;padding:0 8px;color:var(--danger)">清空全部</button>
-    </div>`;
-}
-
-document.addEventListener('click', e => {
-  const wrap = document.getElementById('redisCmdHistoryWrap');
-  if (wrap && !wrap.contains(e.target)) closeRedisCmdHistory();
-});
-
-// 初始化 Redis 命令历史按钮可见性
+// 初始化：页面加载时填入最近一次使用的命令
 (function initRedisCmdHistory() {
-  if (loadRedisCmdHistory().length) {
-    const wrap = document.getElementById('redisCmdHistoryWrap');
-    if (wrap) wrap.style.display = 'block';
+  const list = loadRedisCmdHistory();
+  if (list.length) {
+    const el = document.getElementById('redisCommand');
+    if (el && !el.value) el.value = list[0].cmd;
   }
 })();
+
+/* ─── 全局 Modal ─────────────────────────────────────────────── */
+let _modalResolve = null;
+
+// 打开 Modal，返回 Promise<string|null>（null 表示取消）
+function openModal(title, defaultVal) {
+  return new Promise(resolve => {
+    _modalResolve = resolve;
+    document.getElementById('modalTitle').textContent = title;
+    const input = document.getElementById('modalInput');
+    input.value = defaultVal || '';
+    document.getElementById('globalModal').style.display = 'flex';
+    // 自动聚焦并全选
+    setTimeout(() => { input.focus(); input.select(); }, 50);
+    // Enter 确认
+    input.onkeydown = e => { if (e.key === 'Enter') confirmModal(); if (e.key === 'Escape') closeModal(); };
+  });
+}
+
+function confirmModal() {
+  const val = document.getElementById('modalInput').value.trim();
+  document.getElementById('globalModal').style.display = 'none';
+  if (_modalResolve) { _modalResolve(val || null); _modalResolve = null; }
+}
+
+function closeModal() {
+  document.getElementById('globalModal').style.display = 'none';
+  if (_modalResolve) { _modalResolve(null); _modalResolve = null; }
+}
+
+/* ─── 命令模板 ───────────────────────────────────────────────── */
+
+// 从历史下拉里点击 ★，弹出自定义 Modal 命名后保存
+async function saveAsTemplate(command, kind) {
+  // 先关闭历史下拉，避免 DOM 层级干扰
+  closeSqlHistory();
+  closeRedisCmdHistory();
+
+  const name = await openModal(
+    `存为${kind === 'sql' ? ' SQL' : ' Redis'} 命令模板`,
+    command.slice(0, 40)
+  );
+  if (!name) return;
+
+  const res = await post('/api/cmd-templates/save', { name, command, kind });
+  if (!ok(res)) { alert('保存失败：' + err(res)); return; }
+}
+
+// 加载并渲染模板列表
+async function loadTemplates() {
+  const kind = document.getElementById('templateKindFilter')?.value || '';
+  const url  = '/api/cmd-templates' + (kind ? '?kind=' + kind : '');
+  const res  = await fetch(url).then(r => r.json());
+  const el   = document.getElementById('templateList');
+  if (!ok(res)) { showError(el, err(res)); return; }
+
+  const list = res.data || [];
+  if (!list.length) {
+    el.innerHTML = `<div class="empty-state">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      <p>暂无模板，在 SQL / Redis 历史记录中点击 ★ 收藏</p>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = list.map(t => `
+    <div class="template-item">
+      <div class="template-item-body" onclick="applyTemplate(${JSON.stringify(t.command)}, ${JSON.stringify(t.kind)})" title="点击回填命令">
+        <div class="template-item-name">${esc(t.name)}</div>
+        <div class="template-item-cmd">${esc(t.command)}</div>
+      </div>
+      <span class="template-item-kind">
+        <span class="badge ${t.kind === 'sql' ? 'badge-cyan' : 'badge-pink'}" style="font-size:10px">${t.kind.toUpperCase()}</span>
+      </span>
+      <div class="template-item-del" onclick="deleteTemplate(${JSON.stringify(t.id)}, event)" title="删除">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/></svg>
+      </div>
+    </div>`).join('');
+  appear(el);
+}
+
+// 一键回填：SQL 模板跳到数据库查询 Tab，Redis 模板跳到 Redis Tab
+function applyTemplate(command, kind) {
+  copyString(command);
+  if (kind === 'sql') {
+    document.getElementById('dbQuery').value = command;
+    // 激活数据库查询 Tab
+    const item = [...document.querySelectorAll('.nav-item')].find(n => n.dataset.target === 'db');
+    if (item) item.click();
+    switchDbTab('query');
+  } else {
+    document.getElementById('redisCommand').value = command;
+    const item = [...document.querySelectorAll('.nav-item')].find(n => n.dataset.target === 'redis');
+    if (item) item.click();
+    switchRedisTab('exec');
+  }
+  showToast('已复制并回填');
+}
+
+// 删除模板（直接删，不再弹确认框避免事件冲突）
+async function deleteTemplate(id, e) {
+  if (e) { e.stopPropagation(); e.preventDefault(); }
+  const res = await post('/api/cmd-templates/delete', { id });
+  if (!ok(res)) { alert('删除失败：' + err(res)); return; }
+  loadTemplates();
+}
+
+/* ─── 模板下拉（SQL / Redis 执行区）────────────────────────────── */
+async function loadAndRenderTemplates(kind, anchorBtn) {
+  const res = await fetch('/api/cmd-templates?kind=' + kind).then(r => r.json());
+  if (!ok(res)) return;
+  const list = res.data || [];
+
+  let html = '';
+  if (!list.length) {
+    html = '<div class="sql-history-empty">暂无命令模板</div>';
+  } else {
+    html = list.map(t => `
+      <div class="sql-history-item" data-action="apply-template" data-kind="${kind}" data-command="${esc(t.command)}">
+        <span class="sql-history-item-sql" title="${esc(t.command)}">${esc(t.name)} <span style="color:var(--text-tertiary)">· ${esc(t.command)}</span></span>
+        <span class="sql-history-item-save" data-action="copy-template" data-command="${esc(t.command)}" title="复制">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </span>
+        <span class="sql-history-item-del" data-action="delete-template" data-id="${esc(t.id)}" data-kind="${kind}" title="删除">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </span>
+      </div>`).join('');
+  }
+  if (anchorBtn) _openHistoryPortal(anchorBtn, 'template_' + kind, html);
+}
+
+function toggleSqlTemplates(e, btn) {
+  e.stopPropagation();
+  const type = _hdPortalType;
+  if (type === 'template_sql') { _closeHistoryPortal(); return; }
+  _closeHistoryPortal();
+  loadAndRenderTemplates('sql', btn);
+}
+
+function toggleRedisTemplates(e, btn) {
+  e.stopPropagation();
+  const type = _hdPortalType;
+  if (type === 'template_redis') { _closeHistoryPortal(); return; }
+  _closeHistoryPortal();
+  loadAndRenderTemplates('redis', btn);
+}
+
+function applyTemplateDirect(kind, command) {
+  copyString(command);
+  if (kind === 'sql') {
+    document.getElementById('dbQuery').value = command;
+    switchDbTab('query');
+  } else {
+    document.getElementById('redisCommand').value = command;
+    switchRedisTab('exec');
+  }
+  _closeHistoryPortal();
+  showToast('已复制并回填');
+}
+
+async function deleteTemplateAndRefresh(id, kind) {
+  const res = await post('/api/cmd-templates/delete', { id });
+  if (!ok(res)) { alert('删除失败：' + err(res)); return; }
+  loadTemplates(); // 同步刷新独立模板面板
+  _closeHistoryPortal(); // 关闭下拉，下次打开即刷新
+}
+
+/* ─── 复制与 Toast ───────────────────────────────────────────── */
+async function copyString(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    // fallback: 用临时 textarea + execCommand
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch {}
+    document.body.removeChild(ta);
+  }
+}
+
+function showToast(msg) {
+  let el = document.getElementById('_toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = '_toast';
+    el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(26,29,46,.85);color:#fff;padding:8px 18px;border-radius:8px;font-size:12px;z-index:2000;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;white-space:nowrap;';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.style.opacity = '1';
+  el.style.transform = 'translateX(-50%) translateY(0)';
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateX(-50%) translateY(20px)';
+  }, 1800);
+}
 
 /* ─── Time ───────────────────────────────────────────────────── */
 function refreshTime() {

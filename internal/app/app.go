@@ -22,7 +22,8 @@ func New() *App {
 	handler.NewPageHandler().Register(mux)
 
 	// 共享连接存储
-	connStore := service.NewConnStore()
+	connStore    := service.NewConnStore()
+	templateStore := service.NewCmdTemplateStore()
 
 	// 功能模块注册：新增模块只需在此追加一行
 	modules := []handler.Handler{
@@ -32,6 +33,7 @@ func New() *App {
 		handler.NewDBHandler(connStore),
 		handler.NewRedisHandler(connStore),
 		handler.NewConnStoreHandler(connStore),
+		handler.NewCmdTemplateHandler(templateStore),
 		handler.NewUtilHandler(),
 	}
 	for _, m := range modules {

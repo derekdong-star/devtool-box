@@ -793,6 +793,88 @@ code {
   color: var(--danger);
 }
 
+/* 存为模板按钮（历史条目内） */
+.sql-history-item-save {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.sql-history-item-save:hover {
+  background: var(--violet-light);
+  color: var(--violet);
+}
+
+/* ─── 命令模板面板 ────────────────────────────────────────────── */
+.template-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  overflow-y: auto;
+}
+.template-list::-webkit-scrollbar { width: 4px; }
+.template-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.template-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 9px 12px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.template-item:hover {
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-sm);
+}
+
+.template-item-body {
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+.template-item-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 3px;
+}
+.template-item-cmd {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.template-item-kind {
+  flex-shrink: 0;
+  align-self: center;
+}
+.template-item-del {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  align-self: center;
+}
+.template-item-del:hover { background: var(--danger-light); color: var(--danger); }
+
 .sql-history-empty {
   padding: 20px;
   text-align: center;
@@ -811,6 +893,42 @@ code {
 @media (max-width: 900px) {
   .db-workspace { grid-template-columns: 1fr; }
   .sql-history-dropdown { width: 90vw; right: auto; left: 0; }
+}
+
+/* ─── Modal ──────────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(26,29,46,.45);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn .15s ease;
+}
+.modal-box {
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 16px 48px rgba(26,29,46,.18);
+  padding: 20px 24px;
+  min-width: 320px;
+  max-width: 440px;
+  width: 90vw;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.modal-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 /* ─── Reduced Motion ─────────────────────────────────────────── */

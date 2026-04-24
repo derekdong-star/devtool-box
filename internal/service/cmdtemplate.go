@@ -21,10 +21,13 @@ type CmdTemplateStore struct {
 }
 
 func NewCmdTemplateStore() *CmdTemplateStore {
-	exe, err := os.Executable()
-	dir := "."
-	if err == nil {
-		dir = filepath.Dir(exe)
+	dir := os.Getenv("DATA_DIR")
+	if dir == "" {
+		exe, err := os.Executable()
+		dir = "."
+		if err == nil {
+			dir = filepath.Dir(exe)
+		}
 	}
 	return &CmdTemplateStore{path: filepath.Join(dir, templateFile)}
 }

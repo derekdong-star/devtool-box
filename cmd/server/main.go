@@ -2,12 +2,21 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"devtoolbox/internal/app"
 )
 
 func main() {
-	if err := app.New().Run(":8080"); err != nil {
+	// 统一默认数据目录，确保本地启动和 Docker 共用同一套数据
+	if os.Getenv("DATA_DIR") == "" {
+		os.Setenv("DATA_DIR", "./data")
+	}
+	addr := os.Getenv("ADDR")
+	if addr == "" {
+		addr = ":8080"
+	}
+	if err := app.New().Run(addr); err != nil {
 		log.Fatal(err)
 	}
 }

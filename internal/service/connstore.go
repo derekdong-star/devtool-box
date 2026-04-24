@@ -24,10 +24,13 @@ type ConnStore struct {
 }
 
 func NewConnStore() *ConnStore {
-	exe, err := os.Executable()
-	dir := "."
-	if err == nil {
-		dir = filepath.Dir(exe)
+	dir := os.Getenv("DATA_DIR")
+	if dir == "" {
+		exe, err := os.Executable()
+		dir = "."
+		if err == nil {
+			dir = filepath.Dir(exe)
+		}
 	}
 	return &ConnStore{path: filepath.Join(dir, connFile)}
 }

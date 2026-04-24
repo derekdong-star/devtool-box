@@ -17,3 +17,6 @@ vendor/
 .vscode/
 *.swp
 *.swo
+
+AGENTS.md
+

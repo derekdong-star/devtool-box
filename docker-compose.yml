@@ -1,0 +1,13 @@
+services:
+  devtoolbox:
+    build: .
+    container_name: devtoolbox
+    ports:
+      - "8090:8080"
+    volumes:
+      # 持久化命令模板和连接配置到宿主机 ./data 目录
+      - ./data:/app/data
+    restart: unless-stopped
+    environment:
+      # 数据目录（容器内）
+      - DATA_DIR=/app/data

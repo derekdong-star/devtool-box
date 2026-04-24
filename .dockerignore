@@ -1,0 +1,27 @@
+# Git 仓库
+.git
+.gitignore
+
+# 本地数据（含敏感信息，不要打进镜像）
+*.json
+data/
+
+# Go 构建产物
+devtoolbox
+devtoolbox.exe
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker 自身（避免循环 COPY）
+Dockerfile
+docker-compose.yml
+.dockerignore

@@ -1,7 +1,6 @@
 package service
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/url"
 	"os"
@@ -19,8 +18,8 @@ const connFile = "db_conns.json"
 
 // ConnStore 负责将数据库连接配置持久化到本地 JSON 文件
 type ConnStore struct {
-	mu   sync.RWMutex
-	path string
+	mu    sync.RWMutex
+	store *jsonStore[model.DBConn]
 }
 
 func NewConnStore() *ConnStore {
@@ -32,14 +31,14 @@ func NewConnStore() *ConnStore {
 			dir = filepath.Dir(exe)
 		}
 	}
-	return &ConnStore{path: filepath.Join(dir, connFile)}
+	return &ConnStore{store: newJSONStore[model.DBConn](filepath.Join(dir, connFile))}
 }
 
 // List 返回所有已保存的连接，按保存时间倒序（最新在前）
 func (s *ConnStore) List() ([]model.DBConn, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.load()
+	return s.store.load()
 }
 
 // ListDB 返回非 Redis 的数据库连接列表（业务过滤在 service 层）
@@ -63,7 +62,7 @@ func (s *ConnStore) ListByType(connType string) ([]model.DBConn, error) {
 	if err != nil {
 		return nil, err
 	}
-	result := make([]model.DBConn, 0)
+	result := make([]model.DBConn, 0, len(all))
 	for _, c := range all {
 		if c.Type == connType {
 			result = append(result, c)
@@ -77,7 +76,7 @@ func (s *ConnStore) Save(dbType, dsn string) (model.DBConn, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	conns, err := s.load()
+	conns, err := s.store.load()
 	if err != nil {
 		return model.DBConn{}, err
 	}
@@ -90,13 +89,13 @@ func (s *ConnStore) Save(dbType, dsn string) (model.DBConn, error) {
 	}
 
 	conn := model.DBConn{
-		ID:   uuid.New().String(), // M-4: 使用 uuid 替换时间戳，避免并发碰撞
+		ID:   uuid.New().String(),
 		Name: buildName(dbType, dsn),
 		Type: dbType,
 		DSN:  dsn,
 	}
 	conns = append([]model.DBConn{conn}, conns...)
-	return conn, s.write(conns)
+	return conn, s.store.save(conns)
 }
 
 // Delete 按 ID 删除一条连接
@@ -104,7 +103,7 @@ func (s *ConnStore) Delete(id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	conns, err := s.load()
+	conns, err := s.store.load()
 	if err != nil {
 		return err
 	}
@@ -114,40 +113,22 @@ func (s *ConnStore) Delete(id string) error {
 			filtered = append(filtered, c)
 		}
 	}
-	return s.write(filtered)
-}
-
-// ── 内部方法 ──────────────────────────────────────────────────
-
-func (s *ConnStore) load() ([]model.DBConn, error) {
-	data, err := os.ReadFile(s.path)
-	if os.IsNotExist(err) {
-		return []model.DBConn{}, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	var conns []model.DBConn
-	if err := json.Unmarshal(data, &conns); err != nil {
-		return nil, err
-	}
-	return conns, nil
-}
-
-func (s *ConnStore) write(conns []model.DBConn) error {
-	data, err := json.MarshalIndent(conns, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(s.path, data, 0644)
+	return s.store.save(filtered)
 }
 
 // buildName 从 DSN 提取人类可读的展示名
+func truncate(s string, max int) string {
+	if utf8.RuneCountInString(s) <= max {
+		return s
+	}
+	return string([]rune(s)[:max]) + "…"
+}
+
 func buildName(dbType, dsn string) string {
 	switch dbType {
 	case "mysql":
 		// root:pass@tcp(host:port)/dbname
-		at := strings.LastIndex(dsn, "@") // L-1: 使用标准库替换手写 lastIndex
+		at := strings.LastIndex(dsn, "@")
 		slash := strings.LastIndex(dsn, "/")
 		if at >= 0 && slash > at {
 			host := dsn[at+1 : slash]
@@ -177,12 +158,4 @@ func buildName(dbType, dsn string) string {
 		return fmt.Sprintf("redis@%s/db%s", addr, dbNum)
 	}
 	return fmt.Sprintf("%s:%s", dbType, truncate(dsn, 40))
-}
-
-// truncate 按 Unicode 字符数截断，避免多字节字符（中文/emoji）截断乱码 (L-9)
-func truncate(s string, max int) string {
-	if utf8.RuneCountInString(s) <= max {
-		return s
-	}
-	return string([]rune(s)[:max]) + "…"
 }

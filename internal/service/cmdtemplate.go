@@ -1,7 +1,6 @@
 package service
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,8 +15,8 @@ const templateFile = "cmd_templates.json"
 
 // CmdTemplateStore 将命令模板持久化到本地 JSON 文件
 type CmdTemplateStore struct {
-	mu   sync.RWMutex
-	path string
+	mu    sync.RWMutex
+	store *jsonStore[model.CmdTemplate]
 }
 
 func NewCmdTemplateStore() *CmdTemplateStore {
@@ -29,21 +28,22 @@ func NewCmdTemplateStore() *CmdTemplateStore {
 			dir = filepath.Dir(exe)
 		}
 	}
-	return &CmdTemplateStore{path: filepath.Join(dir, templateFile)}
+	return &CmdTemplateStore{store: newJSONStore[model.CmdTemplate](filepath.Join(dir, templateFile))}
 }
 
 // List 返回所有模板，可按 kind 过滤（空字符串表示全部）
 func (s *CmdTemplateStore) List(kind string) ([]model.CmdTemplate, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	all, err := s.load()
+
+	all, err := s.store.load()
 	if err != nil {
 		return nil, err
 	}
 	if kind == "" {
 		return all, nil
 	}
-	result := make([]model.CmdTemplate, 0)
+	result := make([]model.CmdTemplate, 0, len(all))
 	for _, t := range all {
 		if t.Kind == kind {
 			result = append(result, t)
@@ -57,13 +57,13 @@ func (s *CmdTemplateStore) Save(name, command, kind string) (model.CmdTemplate, 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	name    = strings.TrimSpace(name)
+	name = strings.TrimSpace(name)
 	command = strings.TrimSpace(command)
 	if name == "" || command == "" {
 		return model.CmdTemplate{}, &validationError{"name and command are required"}
 	}
 
-	all, err := s.load()
+	all, err := s.store.load()
 	if err != nil {
 		return model.CmdTemplate{}, err
 	}
@@ -81,7 +81,7 @@ func (s *CmdTemplateStore) Save(name, command, kind string) (model.CmdTemplate, 
 		Kind:    kind,
 	}
 	all = append([]model.CmdTemplate{tmpl}, all...)
-	return tmpl, s.write(all)
+	return tmpl, s.store.save(all)
 }
 
 // Delete 按 ID 删除
@@ -89,7 +89,7 @@ func (s *CmdTemplateStore) Delete(id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	all, err := s.load()
+	all, err := s.store.load()
 	if err != nil {
 		return err
 	}
@@ -99,32 +99,7 @@ func (s *CmdTemplateStore) Delete(id string) error {
 			filtered = append(filtered, t)
 		}
 	}
-	return s.write(filtered)
-}
-
-// ── 内部方法 ──────────────────────────────────────────────────
-
-func (s *CmdTemplateStore) load() ([]model.CmdTemplate, error) {
-	data, err := os.ReadFile(s.path)
-	if os.IsNotExist(err) {
-		return []model.CmdTemplate{}, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	var templates []model.CmdTemplate
-	if err := json.Unmarshal(data, &templates); err != nil {
-		return nil, err
-	}
-	return templates, nil
-}
-
-func (s *CmdTemplateStore) write(templates []model.CmdTemplate) error {
-	data, err := json.MarshalIndent(templates, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(s.path, data, 0644)
+	return s.store.save(filtered)
 }
 
 // validationError 参数校验错误

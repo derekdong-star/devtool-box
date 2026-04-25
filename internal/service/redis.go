@@ -12,8 +12,18 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// maxScanBatches 限制 SCAN 最大批次数，防止无限扫描 (L-5)
-const maxScanBatches = 10
+// Redis 连接与扫描常量
+const (
+	maxScanBatches     = 10
+	defaultScanLimit   = 100
+	zsetPreviewCount   = 199
+	listPreviewCount   = 199
+
+	redisDialTimeout   = 5 * time.Second
+	redisReadTimeout   = 10 * time.Second
+	redisWriteTimeout  = 5 * time.Second
+	redisPingTimeout   = 5 * time.Second
+)
 
 // RedisService 管理 Redis 连接池并封装常用操作
 type RedisService struct {
@@ -49,12 +59,11 @@ func (s *RedisService) getClient(addr, password string, db int) (*redis.Client, 
 		Addr:         addr,
 		Password:     password,
 		DB:           db,
-		DialTimeout:  5 * time.Second,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 5 * time.Second,
+		DialTimeout:  redisDialTimeout,
+		ReadTimeout:  redisReadTimeout,
+		WriteTimeout: redisWriteTimeout,
 	})
-	// M-8: 使用带超时的 context 进行 Ping，避免永久阻塞
-	pingCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	pingCtx, cancel := context.WithTimeout(context.Background(), redisPingTimeout)
 	defer cancel()
 	if err := c.Ping(pingCtx).Err(); err != nil {
 		c.Close()
@@ -92,25 +101,12 @@ func (s *RedisService) ScanKeys(ctx context.Context, addr, password string, db i
 		pattern = "*"
 	}
 	if limit <= 0 {
-		limit = 100
+		limit = defaultScanLimit
 	}
 
-	var keys []string
-	var cursor uint64
-	for {
-		batch, next, err := c.Scan(ctx, cursor, pattern, limit).Result()
-		if err != nil {
-			return nil, err
-		}
-		keys = append(keys, batch...)
-		cursor = next
-		if cursor == 0 || int64(len(keys)) >= limit*maxScanBatches {
-			break
-		}
-	}
-
-	if int64(len(keys)) > limit {
-		keys = keys[:limit]
+	keys, err := s.scanWithLimit(ctx, c, pattern, limit)
+	if err != nil {
+		return nil, err
 	}
 
 	pipe := c.Pipeline()
@@ -126,15 +122,30 @@ func (s *RedisService) ScanKeys(ctx context.Context, addr, password string, db i
 	for i, k := range keys {
 		t, _ := typeCmds[i].Result()
 		ttl, _ := ttlCmds[i].Result()
-		ttlSec := int64(ttl.Seconds())
-		if ttl == -1*time.Second {
-			ttlSec = -1
-		} else if ttl < 0 {
-			ttlSec = -2
-		}
-		result[i] = model.RedisKeyInfo{Key: k, Type: t, TTL: ttlSec}
+		result[i] = model.RedisKeyInfo{Key: k, Type: t, TTL: ttlToSeconds(ttl)}
 	}
 	return result, nil
+}
+
+// scanWithLimit 执行 SCAN 并限制返回数量
+func (s *RedisService) scanWithLimit(ctx context.Context, c *redis.Client, pattern string, limit int64) ([]string, error) {
+	var keys []string
+	var cursor uint64
+	for {
+		batch, next, err := c.Scan(ctx, cursor, pattern, limit).Result()
+		if err != nil {
+			return nil, err
+		}
+		keys = append(keys, batch...)
+		cursor = next
+		if cursor == 0 || int64(len(keys)) >= limit*maxScanBatches {
+			break
+		}
+	}
+	if int64(len(keys)) > limit {
+		keys = keys[:limit]
+	}
+	return keys, nil
 }
 
 // GetValue 获取 key 的完整值（根据类型自动选择命令）
@@ -149,59 +160,51 @@ func (s *RedisService) GetValue(ctx context.Context, addr, password string, db i
 		return nil, err
 	}
 	ttl, _ := c.TTL(ctx, key).Result()
-	ttlSec := int64(ttl.Seconds())
-	if ttl == -1*time.Second {
-		ttlSec = -1
-	} else if ttl < 0 {
-		ttlSec = -2
+
+	resp := &model.RedisValueResp{Key: key, Type: keyType, TTL: ttlToSeconds(ttl)}
+	val, err := s.getValueByType(ctx, c, keyType, key)
+	if err != nil {
+		return nil, err
 	}
+	resp.Value = val
+	return resp, nil
+}
 
-	resp := &model.RedisValueResp{Key: key, Type: keyType, TTL: ttlSec}
-
+// getValueByType 根据 Redis 类型选择对应的读取命令
+func (s *RedisService) getValueByType(ctx context.Context, c *redis.Client, keyType, key string) (interface{}, error) {
 	switch keyType {
 	case "string":
-		v, err := c.Get(ctx, key).Result()
-		if err != nil {
-			return nil, err
-		}
-		resp.Value = v
+		return c.Get(ctx, key).Result()
 	case "list":
-		v, err := c.LRange(ctx, key, 0, 199).Result()
-		if err != nil {
-			return nil, err
-		}
-		resp.Value = v
+		return c.LRange(ctx, key, 0, listPreviewCount).Result()
 	case "hash":
-		v, err := c.HGetAll(ctx, key).Result()
-		if err != nil {
-			return nil, err
-		}
-		resp.Value = v
+		return c.HGetAll(ctx, key).Result()
 	case "set":
-		v, err := c.SMembers(ctx, key).Result()
-		if err != nil {
-			return nil, err
-		}
-		resp.Value = v
+		return c.SMembers(ctx, key).Result()
 	case "zset":
-		v, err := c.ZRangeWithScores(ctx, key, 0, 199).Result()
-		if err != nil {
-			return nil, err
-		}
-		type zItem struct {
-			Member string  `json:"member"`
-			Score  float64 `json:"score"`
-		}
-		items := make([]zItem, len(v))
-		for i, z := range v {
-			items[i] = zItem{Member: fmt.Sprint(z.Member), Score: z.Score}
-		}
-		resp.Value = items
+		return s.getZSetValue(ctx, c, key)
 	default:
-		resp.Value = fmt.Sprintf("unsupported type: %s", keyType)
+		return fmt.Sprintf("unsupported type: %s", keyType), nil
 	}
+}
 
-	return resp, nil
+// getZSetValue 读取 zset 并转换为可 JSON 序列化的结构
+func (s *RedisService) getZSetValue(ctx context.Context, c *redis.Client, key string) ([]zItem, error) {
+	members, err := c.ZRangeWithScores(ctx, key, 0, zsetPreviewCount).Result()
+	if err != nil {
+		return nil, err
+	}
+	items := make([]zItem, len(members))
+	for i, z := range members {
+		items[i] = zItem{Member: fmt.Sprint(z.Member), Score: z.Score}
+	}
+	return items, nil
+}
+
+// zItem 用于 JSON 序列化的 zset 元素
+type zItem struct {
+	Member string  `json:"member"`
+	Score  float64 `json:"score"`
 }
 
 // Exec 执行原始命令（拆分后调用 Do）
@@ -243,4 +246,16 @@ func splitCmd(s string) []string {
 		parts = append(parts, cur.String())
 	}
 	return parts
+}
+
+// ttlToSeconds 将 Redis TTL Duration 转换为秒表示：
+// -1 = 永不过期, -2 = 已过期/不存在, >=0 = 剩余秒数
+func ttlToSeconds(d time.Duration) int64 {
+	if d == -1*time.Second {
+		return -1
+	}
+	if d < 0 {
+		return -2
+	}
+	return int64(d.Seconds())
 }

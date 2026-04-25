@@ -13,6 +13,13 @@ import (
 	"devtoolbox/internal/model"
 )
 
+// 连接池与超时常量
+const (
+	dbMaxOpenConns    = 5
+	dbMaxIdleConns    = 2
+	dbConnMaxLifetime = 10 * time.Minute
+)
+
 type DBService struct {
 	pools map[string]*sql.DB
 	mu    sync.RWMutex
@@ -41,10 +48,9 @@ func (s *DBService) getDB(dbType, dsn string) (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	// M-7: 连接池参数限制，防止资源泄漏
-	db.SetMaxOpenConns(5)
-	db.SetMaxIdleConns(2)
-	db.SetConnMaxLifetime(10 * time.Minute)
+	db.SetMaxOpenConns(dbMaxOpenConns)
+	db.SetMaxIdleConns(dbMaxIdleConns)
+	db.SetConnMaxLifetime(dbConnMaxLifetime)
 	if err := db.Ping(); err != nil {
 		db.Close()
 		return nil, err
@@ -59,7 +65,11 @@ func (s *DBService) Query(dbType, dsn, query string) ([]map[string]interface{}, 
 	if err != nil {
 		return nil, err
 	}
-	return s.scanRows(db.Query(query))
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	return s.scanRows(rows)
 }
 
 // ListTables 列出当前数据库所有用户表名
@@ -214,10 +224,7 @@ func (s *DBService) describeSQLite(db *sql.DB, table string) ([]model.ColumnInfo
 }
 
 // scanRows 通用行扫描
-func (s *DBService) scanRows(rows *sql.Rows, err error) ([]map[string]interface{}, error) {
-	if err != nil {
-		return nil, err
-	}
+func (s *DBService) scanRows(rows *sql.Rows) ([]map[string]interface{}, error) {
 	defer rows.Close()
 
 	cols, err := rows.Columns()

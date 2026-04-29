@@ -11,6 +11,11 @@ async function post(path, body) {
 function ok(res)  { return res && res.code === 0; }
 function err(res) { return (res && res.msg) ? res.msg : 'unknown error'; }
 
+async function logout() {
+  await post('/api/auth/logout', {});
+  location.href = '/login';
+}
+
 /* ─── Result helpers ─────────────────────────────────────────── */
 function showError(el, msg) {
   el.innerHTML = `<div class="empty-state" style="color:var(--danger)">

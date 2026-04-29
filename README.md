@@ -31,6 +31,18 @@ docker compose up -d
 
 > 数据自动持久化到 `./data/` 目录，容器删除重建后配置不丢失。
 
+远程部署前请修改 `docker-compose.yml` 中的登录配置：
+
+```yaml
+environment:
+  - AUTH_USER=admin
+  - AUTH_PASSWORD=change-me
+  - SESSION_SECRET=change-me-to-a-random-long-secret
+  - AUTH_SESSION_TTL=12h
+```
+
+配置 `AUTH_USER`、`AUTH_PASSWORD`、`SESSION_SECRET` 后会启用应用内登录认证；未配置时默认免登录，方便本地开发。
+
 ### 方式二：本地源码运行
 
 **依赖：** Go 1.21+

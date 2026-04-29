@@ -9,7 +9,7 @@ import (
 )
 
 type App struct {
-	mux *http.ServeMux
+	handler http.Handler
 }
 
 // New 组装所有模块并返回 App 实例。
@@ -17,9 +17,11 @@ type App struct {
 // 未来若需加载配置文件等可能失败的操作时再恢复 error。
 func New() *App {
 	mux := http.NewServeMux()
+	auth := service.NewAuthServiceFromEnv()
 
 	// 页面与静态资源
 	handler.NewPageHandler().Register(mux)
+	handler.NewAuthHandler(auth).Register(mux)
 
 	// 共享连接存储
 	connStore    := service.NewConnStore()
@@ -40,10 +42,10 @@ func New() *App {
 		m.Register(mux)
 	}
 
-	return &App{mux: mux}
+	return &App{handler: handler.RequireAuth(auth, mux)}
 }
 
 func (a *App) Run(addr string) error {
-	fmt.Printf("DevToolbox running at http://localhost%s\n", addr)
-	return http.ListenAndServe(addr, a.mux)
+	fmt.Printf("DevToolbox running at http://localhost%s (auth: %s)\n", addr, service.AuthStatusFromEnv())
+	return http.ListenAndServe(addr, a.handler)
 }

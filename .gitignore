@@ -18,6 +18,6 @@ vendor/
 .vscode/
 *.swp
 *.swo
+.env
 
 AGENTS.md
-

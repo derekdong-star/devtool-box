@@ -153,3 +153,9 @@ type CmdTemplateSaveReq struct {
 type CmdTemplateDeleteReq struct {
 	ID string `json:"id"`
 }
+
+// LoginReq 登录请求
+type LoginReq struct {
+	User     string `json:"user"`
+	Password string `json:"password"`
+}

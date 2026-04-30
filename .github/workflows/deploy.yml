@@ -1,8 +1,8 @@
 name: Build and Deploy
 
 on:
-  push:
-    branches: [main]
+  release:
+    types: [published]
 
 env:
   REGISTRY: ghcr.io
@@ -34,8 +34,8 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest
+            type=raw,value=${{ github.event.release.tag_name }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5

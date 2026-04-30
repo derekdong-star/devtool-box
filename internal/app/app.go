@@ -24,8 +24,10 @@ func New() *App {
 	handler.NewAuthHandler(auth).Register(mux)
 
 	// 共享连接存储
-	connStore    := service.NewConnStore()
+	connStore     := service.NewConnStore()
 	templateStore := service.NewCmdTemplateStore()
+	imageCfgStore := service.NewImageConfigStore()
+	imageSvc      := service.NewImageService(imageCfgStore)
 
 	// 功能模块注册：新增模块只需在此追加一行
 	modules := []handler.Handler{
@@ -37,6 +39,8 @@ func New() *App {
 		handler.NewConnStoreHandler(connStore),
 		handler.NewCmdTemplateHandler(templateStore),
 		handler.NewUtilHandler(),
+		handler.NewImageConfigHandler(imageCfgStore),
+		handler.NewImageHandler(imageSvc),
 	}
 	for _, m := range modules {
 		m.Register(mux)

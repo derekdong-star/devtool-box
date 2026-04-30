@@ -1,10 +1,21 @@
 /* ─── HTTP helper ────────────────────────────────────────────── */
-async function post(path, body) {
-  const res = await fetch(path, {
+async function fetchWithTimeout(url, options = {}, timeoutMs = 300000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    return res;
+  } finally {
+    clearTimeout(id);
+  }
+}
+
+async function post(path, body, timeoutMs) {
+  const res = await fetchWithTimeout(path, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
-  }).then(r => r.json());
+  }, timeoutMs).then(r => r.json());
   return res;
 }
 

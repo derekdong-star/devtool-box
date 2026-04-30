@@ -646,10 +646,11 @@ setInterval(refreshTime, 30000);
   restoreTabState(_activeTab);
 })();
 
-if (_activeTab === 'db')    loadSavedConns();
-if (_activeTab === 'redis') loadRedisConns();
-if (_activeTab !== 'db')    loadSavedConns();
-if (_activeTab !== 'redis') loadRedisConns();
+if (_activeTab === 'db')     loadSavedConns();
+if (_activeTab === 'redis')  loadRedisConns();
+if (_activeTab === 'image')  loadImageConfig();
+if (_activeTab !== 'db')     loadSavedConns();
+if (_activeTab !== 'redis')  loadRedisConns();
 
 (function initSecretHistory() {
   renderSecretHistory();

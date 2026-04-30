@@ -931,6 +931,46 @@ code {
   gap: 8px;
 }
 
+/* ─── Image Preview Modal ──────────────────────────────────── */
+.image-preview-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(10,12,20,.88);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  animation: fadeIn .2s ease;
+  padding: 40px;
+}
+.image-preview-modal img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 24px 64px rgba(0,0,0,.4);
+}
+.image-preview-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.15);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background .2s;
+}
+.image-preview-close:hover {
+  background: rgba(255,255,255,.2);
+}
+
 /* ─── Reduced Motion ─────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *,*::before,*::after {
@@ -938,6 +978,157 @@ code {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ─── Image Generation ─────────────────────────────────────── */
+.config-section {
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.config-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--surface);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s ease;
+}
+.config-header:hover { background: var(--surface-hover); }
+.config-header svg { transition: transform 0.2s ease; }
+.config-header.collapsed svg { transform: rotate(-90deg); }
+.config-body {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: fadeInUp 0.2s ease;
+}
+.config-body.hidden { display: none; }
+
+.config-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.config-row label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  width: 72px;
+  flex-shrink: 0;
+  text-align: right;
+}
+.config-row input,
+.config-row textarea {
+  flex: 1;
+  min-height: 34px;
+  font-size: 12px;
+}
+.config-row textarea {
+  min-height: 70px;
+  resize: vertical;
+}
+
+.upload-zone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  text-align: center;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  position: relative;
+}
+.upload-zone:hover,
+.upload-zone.dragover {
+  border-color: var(--violet);
+  background: var(--violet-light);
+}
+.upload-zone.has-image {
+  border-style: solid;
+  border-color: var(--border);
+  background: var(--bg);
+  padding: 14px;
+}
+.upload-zone input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.upload-preview {
+  max-height: 160px;
+  max-width: 100%;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+.upload-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.upload-hint svg { color: var(--text-tertiary); }
+
+.image-result-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+.image-result-card {
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+.image-result-card:hover {
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-md);
+}
+.image-result-card img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  display: block;
+  background: var(--surface-alt);
+}
+.image-result-card .image-actions {
+  display: flex;
+  gap: 6px;
+  padding: 8px 10px;
+  border-top: 1.5px solid var(--border);
+}
+.image-result-card .image-actions button {
+  flex: 1;
+  height: 28px;
+  font-size: 11px;
+  padding: 0 8px;
+  justify-content: center;
+}
+
+.image-workspace {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 16px;
+  min-height: 0;
+}
+@media (max-width: 1100px) {
+  .image-workspace { grid-template-columns: 1fr; }
+}
+
+.prompt-area textarea {
+  min-height: 100px;
+  font-size: 13px;
+}
+
+.btn-sm {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
 }
 
 /* ─── Responsive ─────────────────────────────────────────────── */

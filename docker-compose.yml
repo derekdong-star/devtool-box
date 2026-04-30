@@ -11,8 +11,9 @@ services:
     environment:
       # 数据目录（容器内）
       - DATA_DIR=/app/data
-      # 远程部署建议通过 .env 注入认证配置，避免口令进入 Git 历史
-      - AUTH_USER=${AUTH_USER:-admin}
-      - AUTH_PASSWORD=${AUTH_PASSWORD:-change-me}
-      - SESSION_SECRET=${SESSION_SECRET:-change-me-to-a-random-long-secret}
+      # 认证配置：如需启用登录，在 .env 中设置 AUTH_USER / AUTH_PASSWORD / SESSION_SECRET
+      # 未设置时认证关闭，适合本地开发；生产环境务必配置强密码和随机 SESSION_SECRET
+      - AUTH_USER=${AUTH_USER}
+      - AUTH_PASSWORD=${AUTH_PASSWORD}
+      - SESSION_SECRET=${SESSION_SECRET}
       - AUTH_SESSION_TTL=${AUTH_SESSION_TTL:-12h}

@@ -7,6 +7,7 @@ const TAB_FIELDS = {
   json:   ['jsonInput'],
   codec:  ['codecInput'],
   time:   ['tsInput'],
+  image:  ['imagePrompt', 'imageApiUrl', 'imageApiKey', 'imageModels'],
 };
 const TAB_STATE_KEY    = 'dtb_tab_state';
 const ACTIVE_TAB_KEY   = 'dtb_active_tab';
@@ -67,6 +68,7 @@ navItems.forEach(item => {
     if (target === 'db')        loadSavedConns();
     if (target === 'redis')     loadRedisConns();
     if (target === 'templates') loadTemplates();
+    if (target === 'image')     loadImageConfig();
   });
 });
 

@@ -112,6 +112,11 @@ services:
       - ./data:/app/data
     environment:
       - DATA_DIR=/app/data
+      # 远程部署必须启用认证；真实值由 /opt/devtoolbox/.env 注入
+      - AUTH_USER=${AUTH_USER:-admin}
+      - AUTH_PASSWORD=${AUTH_PASSWORD:-change-me}
+      - SESSION_SECRET=${SESSION_SECRET:-change-me-to-a-random-long-secret}
+      - AUTH_SESSION_TTL=${AUTH_SESSION_TTL:-12h}
     restart: unless-stopped
     networks:
       - caddy_network
@@ -126,6 +131,66 @@ networks:
 - 使用 `expose: 8080` 即可，不需要把应用端口直接暴露到公网
 - `./data` 会映射到容器内 `/app/data`，用于持久化连接配置和命令模板
 - 镜像地址需要与你的 GitHub 仓库发布路径保持一致
+- `AUTH_USER`、`AUTH_PASSWORD`、`SESSION_SECRET` 三项都非空时会启用应用内登录认证
+- 真实账号密码不要写入 Git 仓库，放在服务器 `/opt/devtoolbox/.env`
+
+### 4.1.1 应用内登录认证
+
+远程部署时必须创建 `.env` 文件：
+
+文件：`/opt/devtoolbox/.env`
+
+```bash
+cd /opt/devtoolbox
+
+cat > .env <<'EOF'
+AUTH_USER=derek
+AUTH_PASSWORD=请替换为强密码
+SESSION_SECRET=请替换为随机长密钥
+AUTH_SESSION_TTL=72h
+EOF
+
+chmod 600 .env
+```
+
+推荐用下面命令生成 `SESSION_SECRET`：
+
+```bash
+openssl rand -base64 32
+```
+
+认证规则：
+
+- 未配置 `AUTH_USER` / `AUTH_PASSWORD` / `SESSION_SECRET` 时，认证关闭，适合本地开发
+- 三项都配置后，访问首页会跳转 `/login`
+- 登录成功后写入 `HttpOnly` 签名 Cookie
+- `AUTH_SESSION_TTL` 控制登录有效期，例如 `1h`、`12h`、`72h`、`168h`
+
+修改 `.env` 后需要重建/重启容器：
+
+```bash
+cd /opt/devtoolbox
+sudo docker compose up -d
+```
+
+验证容器是否拿到认证环境变量：
+
+```bash
+sudo docker compose exec devtoolbox printenv | grep -E 'AUTH_|SESSION_SECRET'
+```
+
+验证未登录访问是否会跳转登录页：
+
+```bash
+curl -I https://tool.derekdong.com/
+```
+
+期望结果包含：
+
+```text
+HTTP/2 302
+location: /login
+```
 
 ### 4.2 Caddy 的 Compose 文件
 
@@ -267,6 +332,8 @@ jobs:
           script: |
             set -e
             cd /opt/devtoolbox
+            # 注意：这里默认服务器上的 docker-compose.yml 已经手动更新。
+            # 如果 /opt/devtoolbox 是 git 仓库，可在这里加入：git pull --ff-only
             sudo docker compose pull
             sudo docker compose up -d
             sudo docker image prune -f
@@ -280,6 +347,8 @@ jobs:
 - `build` 阶段负责构建并推送镜像到 GHCR
 - `deploy` 阶段通过 SSH 登录服务器并拉起最新容器
 - 如果 Caddy 配置没有变化，`reload` 仍然是安全的；它不会重启容器，只会热加载配置
+- 工作流只会拉取最新镜像，不会自动更新服务器上的 `/opt/devtoolbox/docker-compose.yml` 或 `.env`
+- 如果修改了 Compose 配置，需要手动同步到服务器，或把 `/opt/devtoolbox` 做成 git 仓库并在部署脚本里执行 `git pull --ff-only`
 
 ## 7. 云防火墙和域名
 
@@ -310,6 +379,16 @@ sudo docker compose up -d
 
 ```bash
 cd /opt/devtoolbox
+
+# 首次远程部署前必须创建 .env，否则认证不会按预期启用
+cat > .env <<'EOF'
+AUTH_USER=derek
+AUTH_PASSWORD=请替换为强密码
+SESSION_SECRET=请替换为随机长密钥
+AUTH_SESSION_TTL=72h
+EOF
+chmod 600 .env
+
 sudo docker compose up -d
 ```
 
@@ -321,6 +400,7 @@ sudo docker compose -f /opt/caddy/docker-compose.yml logs --tail 20
 
 sudo docker compose -f /opt/devtoolbox/docker-compose.yml ps
 sudo docker compose -f /opt/devtoolbox/docker-compose.yml logs --tail 20
+sudo docker compose -f /opt/devtoolbox/docker-compose.yml exec devtoolbox printenv | grep -E 'AUTH_|SESSION_SECRET'
 
 sudo docker network inspect caddy_network
 ```
@@ -329,6 +409,12 @@ sudo docker network inspect caddy_network
 
 ```text
 https://tool.derekdong.com
+```
+
+如果认证已启用，未登录访问应跳转到：
+
+```text
+https://tool.derekdong.com/login
 ```
 
 ## 9. 后续发布
@@ -373,6 +459,8 @@ sudo docker images | head
 | HTTPS 证书申请失败 | 域名解析未生效，或 `80/443` 未放行 | 用 `nslookup` 验证域名解析，用安全组确认端口规则 |
 | `docker compose pull` 失败 | GHCR 镜像访问权限或网络问题 | 手动执行 `sudo docker pull ghcr.io/derekdong-star/devtool-box:latest` 验证 |
 | 修改 Caddyfile 后未生效 | Caddy 配置未重新加载 | 执行 `cd /opt/caddy && sudo docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile` |
+| 访问首页不需要登录 | 容器没有拿到 `AUTH_USER` / `AUTH_PASSWORD` / `SESSION_SECRET`，或服务器上的 Compose 文件未同步 | 检查 `/opt/devtoolbox/.env`，执行 `sudo docker compose exec devtoolbox printenv | grep -E 'AUTH_|SESSION_SECRET'`，确认 `/opt/devtoolbox/docker-compose.yml` 包含认证环境变量 |
+| GitHub Actions 部署后认证配置没变化 | 工作流只拉新镜像，不更新服务器 Compose / `.env` | 手动同步 `/opt/devtoolbox/docker-compose.yml`，或让 `/opt/devtoolbox` 成为 git 仓库并在部署脚本里执行 `git pull --ff-only` |
 
 ## 12. 扩展新服务
 
@@ -423,4 +511,4 @@ sudo docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile
 
 ---
 
-最后更新时间：`2026-04-28`
+最后更新时间：`2026-04-29`

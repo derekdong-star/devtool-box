@@ -159,3 +159,32 @@ type LoginReq struct {
 	User     string `json:"user"`
 	Password string `json:"password"`
 }
+
+// ── 图片生成 ───────────────────────────────────────────────────
+
+// ImageConfig 图片 API 配置（持久化）
+type ImageConfig struct {
+	APIURL string   `json:"api_url"`
+	APIKey string   `json:"api_key"`
+	Models []string `json:"models"`
+}
+
+// ImageGenReq 文生图请求
+type ImageGenReq struct {
+	Prompt string `json:"prompt"`
+	Model  string `json:"model"`
+	Size   string `json:"size,omitempty"`
+	N      int    `json:"n,omitempty"`
+}
+
+// ImageGenResult 单张生成结果
+type ImageGenResult struct {
+	URL           string `json:"url"`
+	RevisedPrompt string `json:"revised_prompt,omitempty"`
+}
+
+// ImageGenResp 生成响应
+type ImageGenResp struct {
+	Created int64            `json:"created"`
+	Data    []ImageGenResult `json:"data"`
+}

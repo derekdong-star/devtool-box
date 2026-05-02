@@ -3,6 +3,13 @@
 let _imageConfig = { api_url: '', api_key: '', models: [] };
 let _uploadedImageFile = null;
 
+const IMAGE_SIZE_OPTIONS = {
+  default: ['1024x1024', '1024x1536', '1536x1024', '1024x1792', '1792x1024', '512x512', '256x256'],
+  'gpt-image': ['1024x1024', '1024x1536', '1536x1024'],
+  'dall-e-3': ['1024x1024', '1024x1792', '1792x1024'],
+  'dall-e-2': ['1024x1024', '512x512', '256x256']
+};
+
 async function loadImageConfig() {
   const res = await fetch('/api/config/image').then(r => r.json());
   if (!ok(res)) {
@@ -39,10 +46,38 @@ function renderImageModelSelect(models) {
   const select = document.getElementById('imageModel');
   if (!models || !models.length) {
     select.innerHTML = '<option value="">— 未配置模型 —</option>';
+    renderImageSizeSelect('');
     return;
   }
   select.innerHTML = '<option value="">— 选择模型 —</option>' +
     models.map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join('');
+  renderImageSizeSelect(select.value);
+}
+
+function normalizeImageModel(model) {
+  return (model || '').trim().replace(/^openai\//, '');
+}
+
+function imageModelFamily(model) {
+  model = normalizeImageModel(model);
+  const lower = model.toLowerCase();
+  if (lower.includes('gpt') && lower.includes('image')) return 'gpt-image';
+  if (model === 'dall-e-3') return 'dall-e-3';
+  if (model === 'dall-e-2') return 'dall-e-2';
+  return 'default';
+}
+
+function renderImageSizeSelect(model) {
+  const select = document.getElementById('imageSize');
+  if (!select) return;
+
+  const current = select.value;
+  const options = IMAGE_SIZE_OPTIONS[imageModelFamily(model)] || IMAGE_SIZE_OPTIONS.default;
+  select.innerHTML = options.map(size => `<option value="${size}">${size}</option>`).join('');
+
+  if (options.includes(current)) {
+    select.value = current;
+  }
 }
 
 /* ─── Image Upload ───────────────────────────────────────────── */
@@ -77,6 +112,27 @@ function removeUploadedImage() {
 document.addEventListener('DOMContentLoaded', () => {
   const zone = document.getElementById('imageUploadZone');
   if (zone) {
+    const input = document.getElementById('imageFileInput');
+    const removeBtn = document.getElementById('imageRemoveBtn');
+    const modelSelect = document.getElementById('imageModel');
+
+    if (modelSelect) {
+      modelSelect.addEventListener('change', () => renderImageSizeSelect(modelSelect.value));
+    }
+
+    zone.addEventListener('click', e => {
+      if (!input) return;
+      if (e.target === input || e.target.closest('#imageRemoveBtn')) return;
+
+      // Clear the native input so re-selecting the same file still fires change.
+      input.value = '';
+      input.click();
+    });
+
+    if (removeBtn) {
+      removeBtn.addEventListener('click', e => e.stopPropagation());
+    }
+
     zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
     zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
     zone.addEventListener('drop', e => {

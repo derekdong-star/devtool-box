@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"mime"
 	"mime/multipart"
 	"net/http"
 	"strings"
@@ -17,6 +18,20 @@ import (
 )
 
 const imageRequestTimeout = 300 * time.Second
+
+// openaiImageResponse 用于解析 OpenAI Images API 的标准响应结构
+// 在 callImageAPI 和 callImageEditAPI 中复用，避免匿名 struct 重复定义
+type openaiImageResponse struct {
+	Created int64 `json:"created"`
+	Data    []struct {
+		URL           string `json:"url"`
+		B64JSON       string `json:"b64_json"`
+		RevisedPrompt string `json:"revised_prompt"`
+	} `json:"data"`
+	Error *struct {
+		Message string `json:"message"`
+	} `json:"error"`
+}
 
 // ImageService 图片生成服务
 type ImageService struct {
@@ -43,16 +58,20 @@ func (s *ImageService) GenerateImage(req model.ImageGenReq) (*model.ImageGenResp
 	if err != nil {
 		return nil, fmt.Errorf("load config: %w", err)
 	}
-	if cfg.APIURL == "" {
+
+	if shouldUseOpenAIImageSDK(cfg, req.Model) {
+		return s.generateImageWithOpenAI(cfg, req)
+	}
+	if normalizeImageAPIBaseURL(cfg.APIURL) == "" {
 		return nil, fmt.Errorf("API URL 未配置，请先保存配置")
 	}
 
 	body := map[string]interface{}{
-		"prompt":          req.Prompt,
-		"model":           req.Model,
-		"n":               defaultN(req.N),
-		"response_format": "b64_json",
+		"prompt": req.Prompt,
+		"model":  req.Model,
+		"n":      defaultN(req.N),
 	}
+	maybeSetImageResponseFormat(body, req.Model)
 	if req.Size != "" {
 		body["size"] = req.Size
 	}
@@ -60,7 +79,6 @@ func (s *ImageService) GenerateImage(req model.ImageGenReq) (*model.ImageGenResp
 	result, err := s.callImageAPI(cfg, body)
 	if err != nil {
 		log.Printf("[image] images/generations failed: %v, falling back to chat/completions", err)
-		// Fallback: try chat completions streaming (for gateways like palebluedot)
 		return s.callChatCompletions(cfg, req)
 	}
 	return result, nil
@@ -72,7 +90,11 @@ func (s *ImageService) GenerateWithImage(file multipart.File, req model.ImageGen
 	if err != nil {
 		return nil, fmt.Errorf("load config: %w", err)
 	}
-	if cfg.APIURL == "" {
+
+	if shouldUseOpenAIImageSDK(cfg, req.Model) {
+		return s.editImageWithOpenAI(cfg, file, req)
+	}
+	if normalizeImageAPIBaseURL(cfg.APIURL) == "" {
 		return nil, fmt.Errorf("API URL 未配置，请先保存配置")
 	}
 
@@ -85,17 +107,7 @@ func (s *ImageService) GenerateWithImage(file multipart.File, req model.ImageGen
 	b64 := base64.StdEncoding.EncodeToString(data)
 	imageDataURL := fmt.Sprintf("data:%s;base64,%s", mimeType, b64)
 
-	body := map[string]interface{}{
-		"prompt": req.Prompt,
-		"model":  req.Model,
-		"image":  imageDataURL,
-		"n":      defaultN(req.N),
-	}
-	if req.Size != "" {
-		body["size"] = req.Size
-	}
-
-	result, err := s.callImageAPI(cfg, body)
+	result, err := s.callImageEditAPI(cfg, data, mimeType, req)
 	if err != nil {
 		// Fallback: try chat completions streaming (for gateways like palebluedot)
 		// Note: for image-to-image, we include the image URL in the prompt
@@ -106,8 +118,101 @@ func (s *ImageService) GenerateWithImage(file multipart.File, req model.ImageGen
 	return result, nil
 }
 
+func (s *ImageService) callImageEditAPI(cfg model.ImageConfig, imageData []byte, mimeType string, req model.ImageGenReq) (*model.ImageGenResp, error) {
+	baseURL := normalizeImageAPIBaseURL(cfg.APIURL)
+	if baseURL == "" {
+		return nil, fmt.Errorf("API URL 未配置，请先保存配置")
+	}
+
+	var payload bytes.Buffer
+	writer := multipart.NewWriter(&payload)
+
+	if err := writer.WriteField("prompt", req.Prompt); err != nil {
+		return nil, fmt.Errorf("write prompt: %w", err)
+	}
+	if err := writer.WriteField("model", req.Model); err != nil {
+		return nil, fmt.Errorf("write model: %w", err)
+	}
+	if err := writer.WriteField("n", fmt.Sprintf("%d", defaultN(req.N))); err != nil {
+		return nil, fmt.Errorf("write n: %w", err)
+	}
+	if req.Size != "" {
+		if err := writer.WriteField("size", req.Size); err != nil {
+			return nil, fmt.Errorf("write size: %w", err)
+		}
+	}
+
+	fileWriter, err := writer.CreateFormFile("image", imageFilenameFromMimeType(mimeType))
+	if err != nil {
+		return nil, fmt.Errorf("create image form file: %w", err)
+	}
+	if _, err := fileWriter.Write(imageData); err != nil {
+		return nil, fmt.Errorf("write image form file: %w", err)
+	}
+	if err := writer.Close(); err != nil {
+		return nil, fmt.Errorf("close multipart writer: %w", err)
+	}
+
+	httpReq, err := http.NewRequest(http.MethodPost, baseURL+"/images/edits", &payload)
+	if err != nil {
+		return nil, fmt.Errorf("build edit request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", writer.FormDataContentType())
+	httpReq.Header.Set("Accept", "application/json")
+	httpReq.Header.Set("Authorization", "Bearer "+cfg.APIKey)
+
+	resp, err := s.client.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("edit request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read edit response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("API error (%d): %s", resp.StatusCode, string(respBody))
+	}
+
+	if len(respBody) == 0 {
+		return nil, fmt.Errorf("API returned empty response body (status 200)")
+	}
+
+	var openaiResp openaiImageResponse
+	if err := json.Unmarshal(respBody, &openaiResp); err != nil {
+		return nil, fmt.Errorf("decode edit response: %w (body: %s)", err, string(respBody))
+	}
+	if openaiResp.Error != nil {
+		return nil, fmt.Errorf("API error: %s", openaiResp.Error.Message)
+	}
+
+	result := &model.ImageGenResp{
+		Created: openaiResp.Created,
+		Data:    make([]model.ImageGenResult, 0, len(openaiResp.Data)),
+	}
+	for _, d := range openaiResp.Data {
+		url := d.URL
+		if url == "" && d.B64JSON != "" {
+			url = "data:image/png;base64," + d.B64JSON
+		}
+		result.Data = append(result.Data, model.ImageGenResult{
+			URL:           url,
+			RevisedPrompt: d.RevisedPrompt,
+		})
+	}
+
+	return result, nil
+}
+
 func (s *ImageService) callImageAPI(cfg model.ImageConfig, body map[string]interface{}) (*model.ImageGenResp, error) {
-	url := strings.TrimRight(cfg.APIURL, "/") + "/images/generations"
+	baseURL := normalizeImageAPIBaseURL(cfg.APIURL)
+	if baseURL == "" {
+		return nil, fmt.Errorf("API URL 未配置，请先保存配置")
+	}
+
+	url := baseURL + "/images/generations"
 
 	payload, err := json.Marshal(body)
 	if err != nil {
@@ -141,17 +246,7 @@ func (s *ImageService) callImageAPI(cfg model.ImageConfig, body map[string]inter
 		return nil, fmt.Errorf("API returned empty response body (status 200)")
 	}
 
-	var openaiResp struct {
-		Created int64 `json:"created"`
-		Data    []struct {
-			URL           string `json:"url"`
-			B64JSON       string `json:"b64_json"`
-			RevisedPrompt string `json:"revised_prompt"`
-		} `json:"data"`
-		Error *struct {
-			Message string `json:"message"`
-		} `json:"error"`
-	}
+	var openaiResp openaiImageResponse
 	if err := json.Unmarshal(respBody, &openaiResp); err != nil {
 		return nil, fmt.Errorf("decode response: %w (body: %s)", err, string(respBody))
 	}
@@ -167,7 +262,6 @@ func (s *ImageService) callImageAPI(cfg model.ImageConfig, body map[string]inter
 	for _, d := range openaiResp.Data {
 		url := d.URL
 		if url == "" && d.B64JSON != "" {
-			// 如果返回的是 base64，包装成 data URL
 			url = "data:image/png;base64," + d.B64JSON
 		}
 		result.Data = append(result.Data, model.ImageGenResult{
@@ -181,7 +275,12 @@ func (s *ImageService) callImageAPI(cfg model.ImageConfig, body map[string]inter
 
 // callChatCompletions 通过 chat completions streaming 生成图片（fallback for gateways like palebluedot）
 func (s *ImageService) callChatCompletions(cfg model.ImageConfig, req model.ImageGenReq) (*model.ImageGenResp, error) {
-	url := strings.TrimRight(cfg.APIURL, "/") + "/chat/completions"
+	baseURL := normalizeImageAPIBaseURL(cfg.APIURL)
+	if baseURL == "" {
+		return nil, fmt.Errorf("API URL 未配置，请先保存配置")
+	}
+
+	url := baseURL + "/chat/completions"
 
 	content := req.Prompt
 	if req.Size != "" {
@@ -270,7 +369,7 @@ func (s *ImageService) callChatCompletions(cfg model.ImageConfig, req model.Imag
 			if readErr == io.EOF {
 				break
 			}
-			continue // skip non-image chunks
+			continue
 		}
 
 		if len(chunk.Choices) > 0 {
@@ -278,7 +377,6 @@ func (s *ImageService) callChatCompletions(cfg model.ImageConfig, req model.Imag
 				url := img.ImageURL.URL
 				if strings.HasPrefix(url, "data:image/") {
 					log.Printf("[image] found image data URL, len=%d", len(url))
-					// Keep full data URL including MIME type (e.g. webp, png)
 					b64Chunks = append(b64Chunks, url)
 				}
 			}
@@ -293,14 +391,61 @@ func (s *ImageService) callChatCompletions(cfg model.ImageConfig, req model.Imag
 		return nil, fmt.Errorf("no image data found in stream")
 	}
 
-	// b64Chunks now contains full data URLs with correct MIME types
-	b64Data := strings.Join(b64Chunks, "")
 	return &model.ImageGenResp{
 		Created: time.Now().Unix(),
 		Data: []model.ImageGenResult{
-			{URL: b64Data},
+			{URL: strings.Join(b64Chunks, "")},
 		},
 	}, nil
+}
+
+func normalizeImageAPIBaseURL(raw string) string {
+	raw = strings.TrimSpace(raw)
+	raw = strings.TrimRight(raw, "/")
+	for _, suffix := range []string{"/images/generations", "/images/edits", "/chat/completions"} {
+		if strings.HasSuffix(raw, suffix) {
+			return strings.TrimSuffix(raw, suffix)
+		}
+	}
+	return raw
+}
+
+func normalizeImageModelName(modelName string) string {
+	modelName = strings.TrimSpace(modelName)
+	modelName = strings.TrimPrefix(modelName, "openai/")
+	return modelName
+}
+
+func isGPTImageModel(modelName string) bool {
+	modelName = strings.ToLower(normalizeImageModelName(modelName))
+	return strings.Contains(modelName, "gpt") && strings.Contains(modelName, "image")
+}
+
+func isOpenAIImageModel(modelName string) bool {
+	modelName = normalizeImageModelName(modelName)
+	return isGPTImageModel(modelName) || strings.HasPrefix(modelName, "dall-e-")
+}
+
+// shouldUseOpenAIImageSDK 判断是否使用官方 OpenAI Go SDK（而非通用 HTTP fallback）
+// 条件 A：模型名是已知的 OpenAI 原生图像模型（gpt-image-* / dall-e-*）
+// 条件 B：用户显式配置了 OpenAI 官方 endpoint，且模型前缀为 openai/*（用于兼容未来新模型）
+func shouldUseOpenAIImageSDK(cfg model.ImageConfig, modelName string) bool {
+	if isOpenAIImageModel(modelName) {
+		return true
+	}
+
+	baseURL := normalizeImageAPIBaseURL(cfg.APIURL)
+	return baseURL == "https://api.openai.com/v1" && strings.HasPrefix(strings.ToLower(modelName), "openai/")
+}
+
+func maybeSetImageResponseFormat(body map[string]interface{}, modelName string) {
+	modelName = normalizeImageModelName(modelName)
+	if isGPTImageModel(modelName) {
+		return
+	}
+	if strings.HasPrefix(modelName, "dall-e-") {
+		body["response_format"] = "b64_json"
+	}
 }
 
 func defaultN(n int) int {
@@ -308,4 +453,12 @@ func defaultN(n int) int {
 		return 1
 	}
 	return n
+}
+
+func imageFilenameFromMimeType(mimeType string) string {
+	extensions, err := mime.ExtensionsByType(mimeType)
+	if err == nil && len(extensions) > 0 {
+		return "upload" + extensions[0]
+	}
+	return "upload.png"
 }

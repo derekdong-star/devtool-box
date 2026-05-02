@@ -3,9 +3,11 @@ FROM golang:1.24-alpine AS builder
 
 WORKDIR /build
 
+ARG GOPROXY=https://goproxy.cn,direct
+
 # 先复制依赖文件，利用 Docker 缓存层
 COPY go.mod go.sum ./
-RUN go mod download
+RUN go env -w GOPROXY=${GOPROXY} && go mod download
 
 # 复制源码（包含 go:embed 的前端静态文件）
 COPY . .
@@ -17,8 +19,8 @@ RUN go build -ldflags="-s -w" -o devtoolbox ./cmd/server
 # ── Runtime Stage ───────────────────────────────────────────────
 FROM alpine:3.21
 
-# 安装 ca-certificates（HTTPS 请求需要）
-RUN apk add --no-cache ca-certificates
+# 安装 ca-certificates（HTTPS 请求需要）和 tzdata（显式时区加载需要）
+RUN apk add --no-cache ca-certificates tzdata
 
 # 从 builder 复制二进制到 PATH
 COPY --from=builder /build/devtoolbox /usr/local/bin/devtoolbox

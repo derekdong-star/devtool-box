@@ -83,13 +83,15 @@ func loadImageConfig(path string) (model.ImageConfig, error) {
 	if err := json.Unmarshal(data, &cfg); err != nil {
 		return model.ImageConfig{}, err
 	}
+	cfg.APIURL = normalizeImageAPIBaseURL(cfg.APIURL)
 	if cfg.Models == nil {
-		cfg.Models = []string{}
+		cfg.Models = defaultImageModels()
 	}
 	return cfg, nil
 }
 
 func saveImageConfig(path string, cfg model.ImageConfig) error {
+	cfg.APIURL = normalizeImageAPIBaseURL(cfg.APIURL)
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
@@ -102,8 +104,16 @@ func saveImageConfig(path string, cfg model.ImageConfig) error {
 
 func defaultImageConfig() model.ImageConfig {
 	return model.ImageConfig{
-		APIURL: "",
+		APIURL: openAIImageAPIBaseURL,
 		APIKey: "",
-		Models: []string{"gpt-5.4-image-2"},
+		Models: defaultImageModels(),
+	}
+}
+
+func defaultImageModels() []string {
+	return []string{
+		"gpt-image-1",
+		"dall-e-3",
+		"dall-e-2",
 	}
 }

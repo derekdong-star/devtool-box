@@ -700,7 +700,7 @@
         <div class="config-body">
           <div class="config-row">
             <label>API URL</label>
-            <input type="text" id="imageApiUrl" placeholder="https://api.tokenrouter.com/v1">
+            <input type="text" id="imageApiUrl" placeholder="https://api.openai.com/v1 或 https://api.tokenrouter.com/v1">
           </div>
           <div class="config-row">
             <label>API Key</label>
@@ -708,7 +708,9 @@
           </div>
           <div class="config-row">
             <label>模型列表</label>
-            <textarea id="imageModels" placeholder="每行一个模型名称">gpt-5.4-image-2</textarea>
+            <textarea id="imageModels" placeholder="每行一个模型名称">gpt-image-1
+dall-e-3
+dall-e-2</textarea>
           </div>
           <div style="display:flex;justify-content:flex-end;margin-top:4px">
             <button class="btn btn-primary btn-sm" onclick="saveImageConfig()">
@@ -738,6 +740,8 @@
               </select>
               <select id="imageSize" style="width:120px;flex-shrink:0">
                 <option value="1024x1024">1024x1024</option>
+                <option value="1024x1536">1024x1536</option>
+                <option value="1536x1024">1536x1024</option>
                 <option value="1024x1792">1024x1792</option>
                 <option value="1792x1024">1792x1024</option>
                 <option value="512x512">512x512</option>

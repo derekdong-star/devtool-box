@@ -659,3 +659,109 @@ if (_activeTab !== 'redis')  loadRedisConns();
     document.getElementById('sessionSecret').value = list[0];
   }
 })();
+
+/* ─── Responsive Breakpoints ────────────────────────────────── */
+// Keep in sync with CSS @media breakpoints in main.css
+const BREAKPOINT_MOBILE   = 700;
+const BREAKPOINT_TABLET   = 1100;
+
+/* ─── Resizer ────────────────────────────────────────────────── */
+// Grid gap (16px × 2) + resizer column (10px) in .image-workspace
+const IMAGE_WORKSPACE_CHROME = 42;
+
+const SIDEBAR_WIDTH_KEY        = 'dtb_sidebar_width';
+const SIDEBAR_MIN_WIDTH        = 220;
+const SIDEBAR_MAX_WIDTH        = 420;
+
+const IMAGE_CONTROLS_WIDTH_KEY = 'dtb_image_controls_width';
+const IMAGE_CONTROLS_MIN_WIDTH = 320;
+const IMAGE_CONTROLS_MAX_WIDTH = 620;
+
+/**
+ * Initialise a drag-to-resize handle.
+ *
+ * @param {object} opts
+ * @param {string}      opts.resizerId     - id of the resizer DOM element
+ * @param {string}      opts.storageKey    - localStorage key for persisting width
+ * @param {string}      opts.cssVar        - CSS custom property to update (e.g. '--sidebar-width')
+ * @param {number}      opts.minWidth
+ * @param {number}      opts.maxWidth
+ * @param {string}      opts.bodyClass     - class added to <body> while dragging
+ * @param {number}      opts.breakpoint    - skip init when innerWidth <= this value
+ * @param {Function}   [opts.getClientX]   - maps PointerEvent → desired width; defaults to e.clientX
+ * @param {Function}   [opts.getMaxWidth]  - dynamic upper bound called on each move; defaults to opts.maxWidth
+ */
+function initResizer(opts) {
+  const resizer = document.getElementById(opts.resizerId);
+  if (!resizer || window.innerWidth <= opts.breakpoint) return;
+
+  const root = document.documentElement;
+
+  const clamp = (width, lo, hi) => Math.min(hi, Math.max(lo, width));
+
+  const savedWidth = parseInt(localStorage.getItem(opts.storageKey) || '', 10);
+  if (!Number.isNaN(savedWidth)) {
+    root.style.setProperty(opts.cssVar, `${clamp(savedWidth, opts.minWidth, opts.maxWidth)}px`);
+  }
+
+  const applyWidth = (rawWidth) => {
+    const hi = opts.getMaxWidth ? opts.getMaxWidth() : opts.maxWidth;
+    const nextWidth = clamp(rawWidth, opts.minWidth, hi);
+    root.style.setProperty(opts.cssVar, `${nextWidth}px`);
+    localStorage.setItem(opts.storageKey, String(nextWidth));
+  };
+
+  let dragging = false;
+
+  const onPointerMove = (e) => {
+    if (!dragging) return;
+    applyWidth(opts.getClientX ? opts.getClientX(e) : e.clientX);
+  };
+
+  const stopDragging = () => {
+    if (!dragging) return;
+    dragging = false;
+    document.body.classList.remove(opts.bodyClass);
+    document.body.style.userSelect = '';
+    window.removeEventListener('pointermove', onPointerMove);
+    window.removeEventListener('pointerup', stopDragging);
+  };
+
+  resizer.addEventListener('pointerdown', (e) => {
+    dragging = true;
+    document.body.classList.add(opts.bodyClass);
+    document.body.style.userSelect = 'none';
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', stopDragging);
+    e.preventDefault();
+  });
+}
+
+/* ─── Sidebar Resize ────────────────────────────────────────── */
+initResizer({
+  resizerId:  'sidebarResizer',
+  storageKey: SIDEBAR_WIDTH_KEY,
+  cssVar:     '--sidebar-width',
+  minWidth:   SIDEBAR_MIN_WIDTH,
+  maxWidth:   SIDEBAR_MAX_WIDTH,
+  bodyClass:  'is-resizing-sidebar',
+  breakpoint: BREAKPOINT_MOBILE,
+});
+
+/* ─── Image Workspace Resize ────────────────────────────────── */
+(function () {
+  const workspace = document.querySelector('.image-workspace');
+  initResizer({
+    resizerId:   'imageWorkspaceResizer',
+    storageKey:  IMAGE_CONTROLS_WIDTH_KEY,
+    cssVar:      '--image-controls-width',
+    minWidth:    IMAGE_CONTROLS_MIN_WIDTH,
+    maxWidth:    IMAGE_CONTROLS_MAX_WIDTH,
+    bodyClass:   'is-resizing-image-workspace',
+    breakpoint:  BREAKPOINT_TABLET,
+    getClientX:  (e) => e.clientX - (workspace ? workspace.getBoundingClientRect().left : 0),
+    getMaxWidth: () => workspace
+      ? Math.min(IMAGE_CONTROLS_MAX_WIDTH, workspace.getBoundingClientRect().width - IMAGE_CONTROLS_MIN_WIDTH - IMAGE_WORKSPACE_CHROME)
+      : IMAGE_CONTROLS_MAX_WIDTH,
+  });
+})();

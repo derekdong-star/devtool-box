@@ -104,6 +104,7 @@
     </div>
   </div>
 </nav>
+<div class="sidebar-resizer" id="sidebarResizer" aria-hidden="true"></div>
 
 <!-- ══ Main ═══════════════════════════════════════════════════ -->
 <div class="main">
@@ -725,7 +726,7 @@ dall-e-2</textarea>
       <div class="image-workspace">
 
         <!-- 左侧控制 -->
-        <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="image-controls-pane" style="display:flex;flex-direction:column;gap:14px">
 
           <div class="card" style="gap:10px">
             <div class="card-header">
@@ -788,8 +789,10 @@ dall-e-2</textarea>
 
         </div>
 
+        <div class="image-workspace-resizer" id="imageWorkspaceResizer" aria-hidden="true"></div>
+
         <!-- 右侧结果 -->
-        <div class="card" style="min-height:0;overflow:hidden">
+        <div class="card image-results-pane" style="min-height:0;overflow:hidden">
           <div class="card-header">
             <div class="card-icon card-icon-emerald">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>

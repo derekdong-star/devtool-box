@@ -196,7 +196,7 @@ async function generateImage() {
       res = await post('/api/image/generate', { prompt, model, size, n: 1 }, 300000);
     }
   } catch (e) {
-    resultArea.innerHTML = `<div class="empty-state" style="color:var(--danger)"><p>请求失败: ${esc(e.message)}</p></div>`;
+    resultArea.innerHTML = `<div class="empty-state" style="color:var(--danger)"><p>请求失败: ${esc(describeRequestError(e))}</p></div>`;
     btnText.textContent = '生成图片';
     return;
   }

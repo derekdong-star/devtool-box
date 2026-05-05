@@ -54,18 +54,25 @@ func (s *ImageService) ConfigStore() *ImageConfigStore {
 
 // GenerateImage 文生图
 func (s *ImageService) GenerateImage(req model.ImageGenReq) (*model.ImageGenResp, error) {
+	startedAt := time.Now()
 	cfg, err := s.cfgStore.Load()
 	if err != nil {
 		return nil, fmt.Errorf("load config: %w", err)
 	}
 
+	branch := "http-images"
 	if shouldUseOpenAIImageSDK(cfg, req.Model) {
-		return s.generateImageWithOpenAI(cfg, req)
+		branch = "sdk-images"
+		log.Printf("[image] start text-to-image model=%q size=%q branch=%s", req.Model, req.Size, branch)
+		result, err := s.generateImageWithOpenAI(cfg, req)
+		logImageResult("text-to-image", branch, req.Model, startedAt, result, err)
+		return result, err
 	}
 	if normalizeImageAPIBaseURL(cfg.APIURL) == "" {
 		return nil, fmt.Errorf("API URL 未配置，请先保存配置")
 	}
 
+	log.Printf("[image] start text-to-image model=%q size=%q branch=%s", req.Model, req.Size, branch)
 	body := map[string]interface{}{
 		"prompt": req.Prompt,
 		"model":  req.Model,
@@ -79,25 +86,35 @@ func (s *ImageService) GenerateImage(req model.ImageGenReq) (*model.ImageGenResp
 	result, err := s.callImageAPI(cfg, body)
 	if err != nil {
 		log.Printf("[image] images/generations failed: %v, falling back to chat/completions", err)
-		return s.callChatCompletions(cfg, req)
+		fallbackResult, fallbackErr := s.callChatCompletions(cfg, req)
+		logImageResult("text-to-image", "http-chat-fallback", req.Model, startedAt, fallbackResult, fallbackErr)
+		return fallbackResult, fallbackErr
 	}
+	logImageResult("text-to-image", branch, req.Model, startedAt, result, nil)
 	return result, nil
 }
 
 // GenerateWithImage 图生图（image edit/variation style）
 func (s *ImageService) GenerateWithImage(file multipart.File, req model.ImageGenReq) (*model.ImageGenResp, error) {
+	startedAt := time.Now()
 	cfg, err := s.cfgStore.Load()
 	if err != nil {
 		return nil, fmt.Errorf("load config: %w", err)
 	}
 
+	branch := "http-image-edits"
 	if shouldUseOpenAIImageSDK(cfg, req.Model) {
-		return s.editImageWithOpenAI(cfg, file, req)
+		branch = "sdk-image-edits"
+		log.Printf("[image] start image-to-image model=%q size=%q branch=%s", req.Model, req.Size, branch)
+		result, err := s.editImageWithOpenAI(cfg, file, req)
+		logImageResult("image-to-image", branch, req.Model, startedAt, result, err)
+		return result, err
 	}
 	if normalizeImageAPIBaseURL(cfg.APIURL) == "" {
 		return nil, fmt.Errorf("API URL 未配置，请先保存配置")
 	}
 
+	log.Printf("[image] start image-to-image model=%q size=%q branch=%s", req.Model, req.Size, branch)
 	// 读取上传的图片并转为 base64 data URL
 	data, err := io.ReadAll(file)
 	if err != nil {
@@ -113,8 +130,11 @@ func (s *ImageService) GenerateWithImage(file multipart.File, req model.ImageGen
 		// Note: for image-to-image, we include the image URL in the prompt
 		log.Printf("[image] GenerateWithImage fallback, image data URL len=%d, mime=%s", len(imageDataURL), mimeType)
 		req.Prompt = req.Prompt + "\n\n[Image: " + imageDataURL + "]"
-		return s.callChatCompletions(cfg, req)
+		fallbackResult, fallbackErr := s.callChatCompletions(cfg, req)
+		logImageResult("image-to-image", "http-chat-fallback", req.Model, startedAt, fallbackResult, fallbackErr)
+		return fallbackResult, fallbackErr
 	}
+	logImageResult("image-to-image", branch, req.Model, startedAt, result, nil)
 	return result, nil
 }
 
@@ -461,4 +481,17 @@ func imageFilenameFromMimeType(mimeType string) string {
 		return "upload" + extensions[0]
 	}
 	return "upload.png"
+}
+
+func logImageResult(operation, branch, model string, startedAt time.Time, result *model.ImageGenResp, err error) {
+	duration := time.Since(startedAt).Round(time.Millisecond)
+	if err != nil {
+		log.Printf("[image] finish %s model=%q branch=%s duration=%s status=error err=%v", operation, model, branch, duration, err)
+		return
+	}
+	itemCount := 0
+	if result != nil {
+		itemCount = len(result.Data)
+	}
+	log.Printf("[image] finish %s model=%q branch=%s duration=%s status=ok items=%d", operation, model, branch, duration, itemCount)
 }

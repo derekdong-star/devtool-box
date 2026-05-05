@@ -1,13 +1,24 @@
 /* ─── HTTP helper ────────────────────────────────────────────── */
 async function fetchWithTimeout(url, options = {}, timeoutMs = 300000) {
   const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeoutMs);
+  const id = setTimeout(() => controller.abort(new DOMException(`Request timed out after ${timeoutMs}ms`, 'TimeoutError')), timeoutMs);
   try {
     const res = await fetch(url, { ...options, signal: controller.signal });
     return res;
   } finally {
     clearTimeout(id);
   }
+}
+
+function describeRequestError(error) {
+  if (!error) return '未知请求错误';
+  if (error.name === 'TimeoutError') {
+    return '请求超时，已自动取消。请检查上游模型响应时间后重试';
+  }
+  if (error.name === 'AbortError') {
+    return '请求已取消。可能是页面刷新、重复提交，或浏览器主动中断了请求';
+  }
+  return error.message || '未知请求错误';
 }
 
 async function post(path, body, timeoutMs) {

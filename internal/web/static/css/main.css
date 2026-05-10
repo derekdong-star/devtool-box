@@ -118,37 +118,63 @@ body.is-resizing-sidebar .sidebar-resizer::before {
 .sidebar-logo {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 16px 18px 14px;
+  gap: 12px;
+  padding: 16px 16px 14px;
   border-bottom: 1.5px solid var(--border);
+  background:
+    radial-gradient(circle at top left, rgba(var(--violet-rgb), 0.12), transparent 44%),
+    linear-gradient(180deg, rgba(255,255,255,0.72), rgba(255,255,255,0));
 }
 
-.sidebar-logo-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius);
-  background: linear-gradient(135deg, var(--violet) 0%, var(--pink) 100%);
+.sidebar-logo-card {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.82), rgba(255,255,255,0.52));
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(124,58,237,0.35);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.85), 0 10px 24px rgba(79,70,229,0.12);
 }
 
-.sidebar-logo-icon svg { color: #fff; }
+.sidebar-logo-icon {
+  width: 40px;
+  height: 40px;
+  display: block;
+}
+
+.sidebar-logo-copy {
+  min-width: 0;
+}
+
+.sidebar-logo-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(var(--violet-rgb), 0.09);
+  color: var(--violet);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
 
 .sidebar-logo-text {
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 800;
   color: var(--text);
-  letter-spacing: -0.3px;
+  letter-spacing: -0.04em;
   line-height: 1.2;
 }
 
 .sidebar-logo-sub {
   font-size: 11px;
   color: var(--text-tertiary);
-  margin-top: 1px;
+  margin-top: 2px;
 }
 
 .nav {
@@ -213,7 +239,7 @@ body.is-resizing-sidebar .sidebar-resizer::before {
 }
 
 .topbar {
-  height: 54px;
+  height: 60px;
   flex-shrink: 0;
   background: var(--bg);
   border-bottom: 1.5px solid var(--border);
@@ -228,6 +254,38 @@ body.is-resizing-sidebar .sidebar-resizer::before {
   font-weight: 700;
   color: var(--text);
   letter-spacing: -0.2px;
+}
+
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 7px 10px 7px 7px;
+  border: 1px solid rgba(var(--violet-rgb), 0.14);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(var(--violet-rgb), 0.06), rgba(255,255,255,0.7));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
+}
+
+.topbar-brand-icon {
+  width: 28px;
+  height: 28px;
+  display: block;
+  flex-shrink: 0;
+}
+
+.topbar-brand-copy {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+}
+
+.topbar-brand-name {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.03em;
 }
 
 .topbar-divider {
@@ -453,6 +511,16 @@ select {
 }
 .result-area::-webkit-scrollbar { width: 4px; height: 4px; }
 .result-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* ─── JSON Tool ─────────────────────────────────────────────── */
+#json .card {
+  min-height: 560px;
+}
+
+#jsonInput,
+#jsonResult {
+  min-height: 460px;
+}
 
 /* ─── Table ──────────────────────────────────────────────────── */
 table { width: 100%; border-collapse: collapse; font-size: 12px; }
@@ -1194,6 +1262,17 @@ body.is-resizing-image-workspace .image-workspace-resizer::before {
 /* ─── Responsive ─────────────────────────────────────────────── */
 @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
 
+@media (max-width: 900px) {
+  #json .card {
+    min-height: 420px;
+  }
+
+  #jsonInput,
+  #jsonResult {
+    min-height: 320px;
+  }
+}
+
 @media (max-width: 700px) {
   body { flex-direction: column; }
   .sidebar {
@@ -1208,4 +1287,10 @@ body.is-resizing-image-workspace .image-workspace-resizer::before {
   .nav-item-icon { width: 22px; height: 22px; }
   .main { overflow: auto; }
   .content { overflow: visible; }
+  .topbar {
+    height: auto;
+    min-height: 56px;
+    padding: 10px 14px;
+    flex-wrap: wrap;
+  }
 }

@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/gob"
 	"fmt"
-	"net/http"
 	"strings"
 
 	"github.com/gorilla/securecookie"
@@ -22,28 +21,23 @@ func NewSessionService() *SessionService {
 //   - 有值时：先用 gorilla/securecookie 验签解码（生产模式）
 //   - 空值时：跳过验签，直接 base64url + gob 解码（调试模式）
 func (s *SessionService) Parse(cookieHeader, sessionSecret string) (map[string]any, error) {
-	// L-8: 使用标准 http.Header + http.Request 替换测试包 httptest
-	header := http.Header{}
-	header.Add("Cookie", cookieHeader)
-	req := &http.Request{Header: header}
-
-	cookie, err := req.Cookie("session")
+	cookieName, cookieValue, err := extractSessionCookie(cookieHeader)
 	if err != nil {
-		return nil, fmt.Errorf("session cookie not found: %w", err)
+		return nil, err
 	}
 
 	// 有 secret，走验签路径
 	if sessionSecret != "" {
 		var verified map[interface{}]interface{}
 		codecs := securecookie.CodecsFromPairs([]byte(sessionSecret))
-		if err := securecookie.DecodeMulti("session", cookie.Value, &verified, codecs...); err == nil {
+		if err := securecookie.DecodeMulti(cookieName, cookieValue, &verified, codecs...); err == nil {
 			return normalizeMap(verified), nil
 		}
 	}
 
 	// 无 secret 或验签失败，走纯解码路径
 	// 格式：base64url(timestamp|base64url(gob_payload)|signature)
-	outer, err := decodeBase64URL(cookie.Value)
+	outer, err := decodeBase64URL(cookieValue)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode session outer base64: %w", err)
 	}
@@ -64,6 +58,111 @@ func (s *SessionService) Parse(cookieHeader, sessionSecret string) (map[string]a
 	}
 
 	return normalizeMap(raw), nil
+}
+
+var exactSessionCookieNames = map[string]struct{}{
+	"session":    {},
+	"sessionid":  {},
+	"session_id": {},
+	"connect.sid": {},
+	"connectsid": {},
+	"jsessionid": {},
+	"phpsessid":  {},
+	"sid":        {},
+}
+
+var setCookieAttrs = map[string]struct{}{
+	"path":       {},
+	"domain":     {},
+	"expires":    {},
+	"max-age":    {},
+	"httponly":   {},
+	"secure":     {},
+	"samesite":   {},
+	"partitioned": {},
+	"priority":   {},
+	"comment":    {},
+	"version":    {},
+}
+
+type sessionCookieCandidate struct {
+	name  string
+	value string
+}
+
+func extractSessionCookie(raw string) (string, string, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return "", "", fmt.Errorf("session cookie not found: empty cookie input")
+	}
+
+	lower := strings.ToLower(raw)
+	switch {
+	case strings.HasPrefix(lower, "cookie:"):
+		raw = strings.TrimSpace(raw[len("cookie:"):])
+	case strings.HasPrefix(lower, "set-cookie:"):
+		raw = strings.TrimSpace(raw[len("set-cookie:"):])
+	}
+
+	if !strings.Contains(raw, "=") && !strings.Contains(raw, ";") {
+		return "session", raw, nil
+	}
+
+	var first sessionCookieCandidate
+	var candidates []sessionCookieCandidate
+
+	for _, part := range strings.Split(raw, ";") {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+
+		kv := strings.SplitN(part, "=", 2)
+		if len(kv) != 2 {
+			continue
+		}
+
+		name := strings.TrimSpace(kv[0])
+		value := strings.TrimSpace(kv[1])
+		if name == "" {
+			continue
+		}
+
+		lowerName := strings.ToLower(name)
+		if _, ok := setCookieAttrs[lowerName]; ok {
+			continue
+		}
+
+		item := sessionCookieCandidate{name: name, value: value}
+		if first.name == "" {
+			first = item
+		}
+		candidates = append(candidates, item)
+		if _, ok := exactSessionCookieNames[lowerName]; ok {
+			return item.name, item.value, nil
+		}
+	}
+
+	for _, item := range candidates {
+		lowerName := strings.ToLower(item.name)
+		if strings.Contains(lowerName, "session") || strings.HasSuffix(lowerName, "sid") {
+			return item.name, item.value, nil
+		}
+	}
+
+	if first.name != "" {
+		return "", "", fmt.Errorf("session cookie not found: available cookies [%s]", joinCookieNames(candidates))
+	}
+
+	return "", "", fmt.Errorf("session cookie not found: no valid cookie pair found")
+}
+
+func joinCookieNames(candidates []sessionCookieCandidate) string {
+	names := make([]string, 0, len(candidates))
+	for _, item := range candidates {
+		names = append(names, item.name)
+	}
+	return strings.Join(names, ", ")
 }
 
 func decodeBase64URL(value string) ([]byte, error) {

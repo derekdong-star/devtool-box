@@ -2,10 +2,11 @@
 
 let _imageConfig = { api_url: '', api_key: '', models: [] };
 let _uploadedImageFile = null;
+const IMAGE_REQUEST_TIMEOUT_MS = 600000;
 
 const IMAGE_SIZE_OPTIONS = {
   default: ['1024x1024', '1024x1536', '1536x1024', '1024x1792', '1792x1024', '512x512', '256x256'],
-  'gpt-image': ['1024x1024', '1024x1536', '1536x1024'],
+  'gpt-image': ['1024x1024', '1024x1536', '1536x1024', '1792x1024'],
   'dall-e-3': ['1024x1024', '1024x1792', '1792x1024'],
   'dall-e-2': ['1024x1024', '512x512', '256x256']
 };
@@ -190,10 +191,10 @@ async function generateImage() {
       form.append('model', model);
       form.append('size', size);
 
-      const fetchRes = await fetchWithTimeout('/api/image/generate-with-image', { method: 'POST', body: form }, 300000);
+      const fetchRes = await fetchWithTimeout('/api/image/generate-with-image', { method: 'POST', body: form }, IMAGE_REQUEST_TIMEOUT_MS);
       res = await fetchRes.json();
     } else {
-      res = await post('/api/image/generate', { prompt, model, size, n: 1 }, 300000);
+      res = await post('/api/image/generate', { prompt, model, size, n: 1 }, IMAGE_REQUEST_TIMEOUT_MS);
     }
   } catch (e) {
     resultArea.innerHTML = `<div class="empty-state" style="color:var(--danger)"><p>请求失败: ${esc(describeRequestError(e))}</p></div>`;

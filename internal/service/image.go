@@ -17,7 +17,7 @@ import (
 	"devtoolbox/internal/model"
 )
 
-const imageRequestTimeout = 300 * time.Second
+const imageRequestTimeout = 600 * time.Second
 
 // openaiImageResponse 用于解析 OpenAI Images API 的标准响应结构
 // 在 callImageAPI 和 callImageEditAPI 中复用，避免匿名 struct 重复定义

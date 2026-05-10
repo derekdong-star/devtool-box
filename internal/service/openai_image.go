@@ -15,7 +15,7 @@ import (
 const openAIImageAPIBaseURL = "https://api.openai.com/v1"
 
 var openAIGenerateSizes = map[string]map[string]struct{}{
-	"gpt-image": {"1024x1024": {}, "1024x1536": {}, "1536x1024": {}},
+	"gpt-image": {"1024x1024": {}, "1024x1536": {}, "1536x1024": {}, "1792x1024": {}},
 	"dall-e-3":  {"1024x1024": {}, "1024x1792": {}, "1792x1024": {}},
 	"dall-e-2":  {"256x256": {}, "512x512": {}, "1024x1024": {}},
 }

@@ -188,3 +188,25 @@ type ImageGenResp struct {
 	Created int64            `json:"created"`
 	Data    []ImageGenResult `json:"data"`
 }
+
+// UploadConfig COS 上传配置
+type UploadConfig struct {
+	SecretID             string `json:"secret_id"`
+	SecretKey            string `json:"secret_key"`
+	Bucket               string `json:"bucket"`
+	Region               string `json:"region"`
+	Domain               string `json:"domain"`
+	PublicBaseURL        string `json:"public_base_url"`
+	PathPrefix           string `json:"path_prefix"`
+	UseSignedURL         bool   `json:"use_signed_url"`
+	SignedURLExpireSecs  int    `json:"signed_url_expire_seconds"`
+}
+
+// UploadResult 单文件上传结果
+type UploadResult struct {
+	Key          string `json:"key"`
+	URL          string `json:"url"`
+	Size         int64  `json:"size"`
+	ContentType  string `json:"content_type"`
+	OriginalName string `json:"original_name"`
+}

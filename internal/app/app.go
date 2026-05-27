@@ -28,6 +28,8 @@ func New() *App {
 	templateStore := service.NewCmdTemplateStore()
 	imageCfgStore := service.NewImageConfigStore()
 	imageSvc      := service.NewImageService(imageCfgStore)
+	uploadCfgStore := service.NewUploadConfigStore()
+	uploadSvc      := service.NewUploadService(uploadCfgStore)
 
 	// 功能模块注册：新增模块只需在此追加一行
 	modules := []handler.Handler{
@@ -41,6 +43,7 @@ func New() *App {
 		handler.NewUtilHandler(),
 		handler.NewImageConfigHandler(imageCfgStore),
 		handler.NewImageHandler(imageSvc),
+		handler.NewUploadHandler(uploadCfgStore, uploadSvc),
 	}
 	for _, m := range modules {
 		m.Register(mux)

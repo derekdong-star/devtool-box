@@ -649,6 +649,7 @@ setInterval(refreshTime, 30000);
 if (_activeTab === 'db')     loadSavedConns();
 if (_activeTab === 'redis')  loadRedisConns();
 if (_activeTab === 'image')  loadImageConfig();
+if (_activeTab === 'upload') loadUploadConfig();
 if (_activeTab !== 'db')     loadSavedConns();
 if (_activeTab !== 'redis')  loadRedisConns();
 

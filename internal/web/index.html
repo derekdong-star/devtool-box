@@ -101,6 +101,14 @@
       </div>
       图片生成
     </div>
+    <div class="nav-item" data-target="upload" data-desc="上传图片或文件到腾讯云 COS，返回资源链接">
+      <div class="nav-item-icon">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+      </div>
+      文件上传
+    </div>
   </div>
 </nav>
 <div class="sidebar-resizer" id="sidebarResizer" aria-hidden="true"></div>
@@ -817,6 +825,119 @@ dall-e-2</textarea>
       </div>
     </div>
 
+    <!-- ── 文件上传 ────────────────────────────────────────────── -->
+    <div class="panel" id="upload">
+
+      <div class="config-section">
+        <div class="config-header" onclick="this.classList.toggle('collapsed');this.nextElementSibling.classList.toggle('hidden')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          <span style="font-size:12px;font-weight:600;color:var(--text-secondary)">COS 配置</span>
+          <span style="margin-left:auto;font-size:11px;color:var(--text-tertiary)">点击折叠/展开</span>
+        </div>
+        <div class="config-body">
+          <div class="config-row">
+            <label>SecretId</label>
+            <input type="text" id="uploadSecretId" placeholder="腾讯云 SecretId">
+          </div>
+          <div class="config-row">
+            <label>SecretKey</label>
+            <input type="password" id="uploadSecretKey" placeholder="腾讯云 SecretKey">
+          </div>
+          <div class="config-row">
+            <label>Bucket</label>
+            <input type="text" id="uploadBucket" placeholder="examplebucket-1250000000">
+          </div>
+          <div class="config-row">
+            <label>Region</label>
+            <input type="text" id="uploadRegion" placeholder="ap-guangzhou">
+          </div>
+          <div class="config-row">
+            <label>Domain</label>
+            <input type="text" id="uploadDomain" placeholder="可选，自定义 COS 域名">
+          </div>
+          <div class="config-row">
+            <label>Base URL</label>
+            <input type="text" id="uploadPublicBaseUrl" placeholder="可选，资源访问域名，例如 https://img.example.com">
+          </div>
+          <div class="config-row">
+            <label>前缀</label>
+            <input type="text" id="uploadPathPrefix" placeholder="uploads">
+          </div>
+          <div class="config-row">
+            <label>签名秒数</label>
+            <input type="number" id="uploadSignedURLExpire" min="60" step="60" placeholder="3600">
+          </div>
+          <div class="config-row upload-checkbox-row">
+            <label>返回链接</label>
+            <label class="checkbox-label"><input type="checkbox" id="uploadUseSignedUrl"> 默认返回预签名 URL</label>
+          </div>
+          <div style="display:flex;justify-content:flex-end;margin-top:4px">
+            <button class="btn btn-primary btn-sm" onclick="saveUploadConfig()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
+              保存配置
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2 upload-grid">
+        <div class="card" style="gap:12px">
+          <div class="card-header">
+            <div class="card-icon card-icon-cyan">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </div>
+            <span class="card-title">上传文件</span>
+            <span class="hint" style="margin-left:auto">支持图片和常见文档</span>
+          </div>
+
+          <div class="upload-zone" id="cosUploadZone">
+            <input type="file" id="cosFileInput" onchange="handleCOSFileSelect(this)">
+            <div class="upload-hint" id="cosUploadHint">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <span style="font-size:12px">点击上传或拖拽文件到此处</span>
+              <span style="font-size:11px;color:var(--text-tertiary)">单文件最大 50MB</span>
+            </div>
+            <div id="cosUploadSelected" class="upload-file-selected" style="display:none"></div>
+            <button class="btn btn-ghost btn-sm" id="cosRemoveBtn" style="display:none;margin-top:6px" onclick="clearCOSFile()">移除文件</button>
+          </div>
+
+          <div class="config-row">
+            <label>目录</label>
+            <input type="text" id="uploadDirectory" list="uploadDirectoryHistory" placeholder="可选，例如 article-covers 或 docs">
+            <datalist id="uploadDirectoryHistory"></datalist>
+          </div>
+          <div class="config-row">
+            <label>文件名</label>
+            <input type="text" id="uploadObjectName" placeholder="可选，自定义对象名，例如 hero-banner.png">
+          </div>
+          <div class="config-row upload-checkbox-row">
+            <label>本次链接</label>
+            <label class="checkbox-label"><input type="checkbox" id="uploadForceSignedUrl"> 本次强制返回预签名 URL</label>
+          </div>
+
+          <button class="btn btn-primary" style="height:40px;justify-content:center;font-size:14px" onclick="uploadFileToCOS()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <span id="uploadBtnText">上传到 COS</span>
+          </button>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon card-icon-emerald">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            </div>
+            <span class="card-title">上传结果</span>
+          </div>
+          <div id="uploadResultArea" class="result-area">
+            <div class="empty-state">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <p>上传成功后，这里会显示 COS 资源链接</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -848,6 +969,7 @@ dall-e-2</textarea>
 <script src="/static/js/history.js"></script>
 <script src="/static/js/templates.js"></script>
 <script src="/static/js/image.js"></script>
+<script src="/static/js/upload.js"></script>
 <script src="/static/js/app.js"></script>
 </body>
 </html>

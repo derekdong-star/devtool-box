@@ -383,7 +383,7 @@ cd /opt/devtoolbox
 # 首次远程部署前必须创建 .env，否则认证不会按预期启用
 cat > .env <<'EOF'
 AUTH_USER=derek
-AUTH_PASSWORD=请替换为强密码
+AUTH_PASSWORD=123qaz
 SESSION_SECRET=请替换为随机长密钥
 AUTH_SESSION_TTL=72h
 EOF

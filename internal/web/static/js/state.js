@@ -39,6 +39,15 @@ function restoreTabState(tabId) {
   } catch {}
 }
 
+function removeTabState(tabId) {
+  try {
+    const all = JSON.parse(localStorage.getItem(TAB_STATE_KEY) || '{}');
+    if (!all || typeof all !== 'object' || !(tabId in all)) return;
+    delete all[tabId];
+    localStorage.setItem(TAB_STATE_KEY, JSON.stringify(all));
+  } catch {}
+}
+
 /* ─── Tab navigation ─────────────────────────────────────────── */
 const navItems = document.querySelectorAll('.nav-item');
 const panels   = document.querySelectorAll('.panel');
@@ -69,6 +78,7 @@ navItems.forEach(item => {
     if (target === 'redis')     loadRedisConns();
     if (target === 'templates') loadTemplates();
     if (target === 'image')     loadImageConfig();
+    if (target === 'upload')    loadUploadConfig();
   });
 });
 

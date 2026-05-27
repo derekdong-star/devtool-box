@@ -1168,6 +1168,80 @@ code {
 }
 .upload-hint svg { color: var(--text-tertiary); }
 
+.upload-file-selected {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+
+.upload-selected-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  word-break: break-all;
+}
+
+.upload-selected-meta {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.upload-grid {
+  align-items: start;
+}
+
+.upload-checkbox-row {
+  align-items: center;
+}
+
+.checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.checkbox-label input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+}
+
+.upload-result-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.upload-result-row {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+.upload-result-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.upload-result-value {
+  font-size: 12px;
+  color: var(--text);
+  word-break: break-all;
+}
+
+.upload-result-url-block textarea {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-height: 148px;
+  resize: vertical;
+}
+
 .image-result-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));

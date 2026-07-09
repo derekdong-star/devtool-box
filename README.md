@@ -1,12 +1,12 @@
 # DevToolbox
 
-后端开发日常工具箱，单命令启动，浏览器操作。
+后端开发日常工具箱，产品界面名为 Toolbox，单命令启动，浏览器操作。
 
 ## 功能
 
 | 模块 | 功能 |
 |------|------|
-| **数据库查询** | MySQL / PostgreSQL / SQLite，查看表列表、表结构、执行 SQL；历史连接自动保存；SQL 命令历史与模板 |
+| **数据库查询** | MySQL / PostgreSQL / SQLite，查看表列表、表结构、执行 SQL；历史连接自动保存并支持自定义名称；SQL 命令历史与模板 |
 | **Redis 查询** | 连接 Redis，前缀搜索 Key，查看各类型 Value，执行任意命令；历史连接自动保存；Redis 命令历史与模板 |
 | **命令模板** | SQL / Redis 常用命令保存为模板，一键回填并自动复制到剪贴板；模板数据后端持久化 |
 | **Cookie 解析** | 拆解 Cookie 字段；解析 gorilla/securecookie Session，支持带 Secret 验签 |
@@ -14,6 +14,8 @@
 | **JSON 工具** | 格式化 / 压缩 / 转义 |
 | **编码转换** | Base64 / URL 编解码 |
 | **时间 / UUID** | 时间戳互转，批量生成 UUID v4 |
+| **图片生成** | 文生图 / 图生图，支持 OpenAI SDK 路径和 OpenAI-compatible API |
+| **文件上传** | 上传图片或文件到腾讯云 COS，返回资源链接，支持目录历史 |
 
 ## 快速开始
 
@@ -83,5 +85,7 @@ pkg/response/       # 统一响应格式
 |---|---|
 | `db_conns.json` | 数据库 / Redis 连接配置（含密码） |
 | `cmd_templates.json` | SQL / Redis 命令模板 |
+| `image_config.json` | 图片生成 API 配置（含 API Key） |
+| `upload_config.json` | 腾讯云 COS 上传配置（含 SecretKey） |
 
 已加入 `.gitignore`，不会提交到仓库。本地启动和 Docker 共用同一套数据文件。

@@ -40,6 +40,7 @@ type DBQueryReq struct {
 type DBConnReq struct {
 	Type  string `json:"type"`
 	DSN   string `json:"dsn"`
+	Name  string `json:"name,omitempty"`
 	Table string `json:"table,omitempty"`
 }
 
@@ -68,10 +69,10 @@ type SessionParseReq struct {
 
 // DBConn 已保存的数据库连接配置
 type DBConn struct {
-	ID    string `json:"id"`    // 唯一 ID，用时间戳生成
-	Name  string `json:"name"`  // 显示名（自动生成：type@host/db）
-	Type  string `json:"type"`
-	DSN   string `json:"dsn"`
+	ID   string `json:"id"`   // 唯一 ID，用时间戳生成
+	Name string `json:"name"` // 显示名（用户自定义优先，未填则自动生成）
+	Type string `json:"type"`
+	DSN  string `json:"dsn"`
 }
 
 // DBConnDeleteReq 删除连接请求
@@ -191,15 +192,15 @@ type ImageGenResp struct {
 
 // UploadConfig COS 上传配置
 type UploadConfig struct {
-	SecretID             string `json:"secret_id"`
-	SecretKey            string `json:"secret_key"`
-	Bucket               string `json:"bucket"`
-	Region               string `json:"region"`
-	Domain               string `json:"domain"`
-	PublicBaseURL        string `json:"public_base_url"`
-	PathPrefix           string `json:"path_prefix"`
-	UseSignedURL         bool   `json:"use_signed_url"`
-	SignedURLExpireSecs  int    `json:"signed_url_expire_seconds"`
+	SecretID            string `json:"secret_id"`
+	SecretKey           string `json:"secret_key"`
+	Bucket              string `json:"bucket"`
+	Region              string `json:"region"`
+	Domain              string `json:"domain"`
+	PublicBaseURL       string `json:"public_base_url"`
+	PathPrefix          string `json:"path_prefix"`
+	UseSignedURL        bool   `json:"use_signed_url"`
+	SignedURLExpireSecs int    `json:"signed_url_expire_seconds"`
 }
 
 // UploadResult 单文件上传结果

@@ -71,8 +71,8 @@ func (s *ConnStore) ListByType(connType string) ([]model.DBConn, error) {
 	return result, nil
 }
 
-// Save 保存一条连接；若已存在相同 type+DSN 则直接返回，不重复写入
-func (s *ConnStore) Save(dbType, dsn string) (model.DBConn, error) {
+// Save 保存一条连接；若已存在相同 type+DSN，则按需更新名称并返回
+func (s *ConnStore) Save(dbType, dsn, name string) (model.DBConn, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -81,16 +81,25 @@ func (s *ConnStore) Save(dbType, dsn string) (model.DBConn, error) {
 		return model.DBConn{}, err
 	}
 
-	// 去重：同 type + DSN 已存在则直接返回
-	for _, c := range conns {
+	displayName := pickConnName(name, dbType, dsn)
+
+	// 去重：同 type + DSN 已存在则按需更新名称
+	for i, c := range conns {
 		if c.Type == dbType && c.DSN == dsn {
+			if strings.TrimSpace(name) != "" && c.Name != displayName {
+				conns[i].Name = displayName
+				if err := s.store.save(conns); err != nil {
+					return model.DBConn{}, err
+				}
+				return conns[i], nil
+			}
 			return c, nil
 		}
 	}
 
 	conn := model.DBConn{
 		ID:   uuid.New().String(),
-		Name: buildName(dbType, dsn),
+		Name: displayName,
 		Type: dbType,
 		DSN:  dsn,
 	}
@@ -158,4 +167,11 @@ func buildName(dbType, dsn string) string {
 		return fmt.Sprintf("redis@%s/db%s", addr, dbNum)
 	}
 	return fmt.Sprintf("%s:%s", dbType, truncate(dsn, 40))
+}
+
+func pickConnName(customName, dbType, dsn string) string {
+	if trimmed := strings.TrimSpace(customName); trimmed != "" {
+		return trimmed
+	}
+	return buildName(dbType, dsn)
 }

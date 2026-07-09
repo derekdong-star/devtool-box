@@ -41,7 +41,7 @@ func (h *RedisHandler) Ping(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// 连接成功 → 自动保存
-	h.store.Save("redis", redisConnDSN(req)) //nolint
+	h.store.Save("redis", redisConnDSN(req), "") //nolint
 	OK(w, map[string]string{"version": version})
 }
 

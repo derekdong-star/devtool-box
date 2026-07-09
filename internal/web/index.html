@@ -483,6 +483,10 @@
           </button>
         </div>
 
+        <div class="db-connection-row">
+          <input id="dbConnName" type="text" placeholder="连接名称，可选，例如 生产主库" style="flex:1" oninput="setConnectBtnState('dbConnectBtn',false)">
+        </div>
+
         <!-- 手动输入行 -->
         <div class="db-connection-row">
           <select id="dbType">

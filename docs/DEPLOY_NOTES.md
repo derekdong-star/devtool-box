@@ -1,6 +1,6 @@
 # DevToolbox 自动部署说明
 
-> 目标：当代码推送到 `main` 分支后，由 GitHub Actions 自动构建并推送 Docker 镜像，再通过 SSH 登录腾讯云服务器完成更新；公网流量统一由 Caddy 反向代理，并自动申请 HTTPS 证书。
+> 目标：发布 GitHub Release 后，由 GitHub Actions 自动构建并推送 Docker 镜像，再通过 SSH 登录腾讯云服务器完成更新；公网流量统一由 Caddy 反向代理，并自动申请 HTTPS 证书。
 
 ## 1. 部署拓扑
 
@@ -14,7 +14,7 @@
 示意：
 
 ```text
-git push main
+publish GitHub Release
   -> GitHub Actions
   -> GHCR
   -> SSH 到腾讯云服务器
@@ -267,14 +267,14 @@ cat ~/.ssh/github_actions
 
 ## 6. GitHub Actions 工作流
 
-在仓库中创建文件 `.github/workflows/deploy.yml`：
+仓库中的实际工作流文件为 `.github/workflows/deploy.yml`，当前通过发布 GitHub Release 触发：
 
 ```yaml
 name: Build and Deploy
 
 on:
-  push:
-    branches: [main]
+  release:
+    types: [published]
 
 env:
   REGISTRY: ghcr.io
@@ -306,8 +306,8 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest
+            type=raw,value=${{ github.event.release.tag_name }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -332,21 +332,16 @@ jobs:
           script: |
             set -e
             cd /opt/devtoolbox
-            # 注意：这里默认服务器上的 docker-compose.yml 已经手动更新。
-            # 如果 /opt/devtoolbox 是 git 仓库，可在这里加入：git pull --ff-only
             sudo docker compose pull
             sudo docker compose up -d
             sudo docker image prune -f
-
-            cd /opt/caddy
-            sudo docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile
 ```
 
 说明：
 
 - `build` 阶段负责构建并推送镜像到 GHCR
 - `deploy` 阶段通过 SSH 登录服务器并拉起最新容器
-- 如果 Caddy 配置没有变化，`reload` 仍然是安全的；它不会重启容器，只会热加载配置
+- Caddy 作为独立服务运行；只有 Caddyfile 变更时才需要手动 reload
 - 工作流只会拉取最新镜像，不会自动更新服务器上的 `/opt/devtoolbox/docker-compose.yml` 或 `.env`
 - 如果修改了 Compose 配置，需要手动同步到服务器，或把 `/opt/devtoolbox` 做成 git 仓库并在部署脚本里执行 `git pull --ff-only`
 
@@ -419,7 +414,7 @@ https://tool.derekdong.com/login
 
 ## 9. 后续发布
 
-后续发布流程只有一条：
+后续发布分两步：先提交并推送代码，再发布 GitHub Release 触发自动部署。
 
 ```bash
 git add .
@@ -427,13 +422,19 @@ git commit -m "feat: xxx"
 git push origin main
 ```
 
-推送到 `main` 后：
+然后在 GitHub 页面创建并发布 Release，或使用 GitHub CLI：
+
+```bash
+gh release create vX.Y.Z --target main --generate-notes
+```
+
+Release 发布后：
 
 1. GitHub Actions 自动构建镜像
 2. 新镜像推送到 GHCR
 3. 工作流 SSH 到服务器执行 `docker compose pull`
 4. DevToolbox 容器以最新镜像重建
-5. Caddy 保持运行，仅执行配置热加载
+5. Caddy 保持运行；如未改 Caddyfile，不需要 reload
 
 通常 2 到 3 分钟内可完成更新。
 
@@ -461,6 +462,7 @@ sudo docker images | head
 | 修改 Caddyfile 后未生效 | Caddy 配置未重新加载 | 执行 `cd /opt/caddy && sudo docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile` |
 | 访问首页不需要登录 | 容器没有拿到 `AUTH_USER` / `AUTH_PASSWORD` / `SESSION_SECRET`，或服务器上的 Compose 文件未同步 | 检查 `/opt/devtoolbox/.env`，执行 `sudo docker compose exec devtoolbox printenv | grep -E 'AUTH_|SESSION_SECRET'`，确认 `/opt/devtoolbox/docker-compose.yml` 包含认证环境变量 |
 | GitHub Actions 部署后认证配置没变化 | 工作流只拉新镜像，不更新服务器 Compose / `.env` | 手动同步 `/opt/devtoolbox/docker-compose.yml`，或让 `/opt/devtoolbox` 成为 git 仓库并在部署脚本里执行 `git pull --ff-only` |
+| `git push main` 后没有部署 | 当前工作流由 GitHub Release 触发，不由 push 触发 | 创建并发布 GitHub Release，检查 Actions 页面是否出现 `Build and Deploy` 运行记录 |
 
 ## 12. 扩展新服务
 
@@ -508,7 +510,9 @@ sudo docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile
 
 - 数据库和 Redis 连接配置
 - SQL / Redis 命令模板
+- 图片生成 API 配置
+- COS 上传配置
 
 ---
 
-最后更新时间：`2026-04-29`
+最后更新时间：`2026-07-09`

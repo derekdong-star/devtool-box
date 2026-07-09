@@ -55,8 +55,11 @@ func (h *DBHandler) ListTables(w http.ResponseWriter, r *http.Request) {
 		Fail(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	// 连接成功 → 自动保存（去重由 ConnStore 内部处理）
-	h.store.Save(req.Type, req.DSN) //nolint
+	// 连接成功 → 自动保存（去重与名称更新由 ConnStore 内部处理）
+	if _, err := h.store.Save(req.Type, req.DSN, req.Name); err != nil {
+		Fail(w, http.StatusInternalServerError, "保存连接失败: "+err.Error())
+		return
+	}
 	OK(w, tables)
 }
 

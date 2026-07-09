@@ -23,5 +23,3 @@ vendor/
 *.swp
 *.swo
 .env
-
-AGENTS.md

@@ -1,6 +1,6 @@
 /* ─── Tab State 持久化（localStorage）───────────────────────── */
 const TAB_FIELDS = {
-  db:     ['dbType', 'dbDsn', 'dbQuery'],
+  db:     ['dbType', 'dbConnName', 'dbDsn', 'dbQuery'],
   redis:  ['redisAddr', 'redisDB', 'redisPattern', 'redisCommand'],
   cookie: ['cookieInput'],
   jwt:    ['jwtInput'],

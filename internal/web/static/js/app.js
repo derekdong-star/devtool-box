@@ -202,6 +202,7 @@ function applyConn(id) {
   const conn = _savedConns.find(c => c.id === id);
   if (!conn) return;
   document.getElementById('dbType').value = conn.type;
+  document.getElementById('dbConnName').value = conn.name || '';
   document.getElementById('dbDsn').value  = conn.dsn;
   document.getElementById('dbSavedConns').value = id;
 }
@@ -225,6 +226,7 @@ let _dbActiveTable = '';
 function dbConn() {
   return {
     type: document.getElementById('dbType').value,
+    name: document.getElementById('dbConnName').value.trim(),
     dsn:  document.getElementById('dbDsn').value.trim(),
   };
 }
@@ -250,7 +252,7 @@ function setConnectBtnState(btnId, connected, label) {
 }
 
 async function loadTables() {
-  const { type, dsn } = dbConn();
+  const { type, name, dsn } = dbConn();
   const listEl  = document.getElementById('dbTableList');
   const countEl = document.getElementById('dbTableCount');
 
@@ -258,7 +260,7 @@ async function loadTables() {
   listEl.innerHTML = `<div class="empty-state"><div class="spinner"></div><p>连接中...</p></div>`;
   countEl.innerHTML = '';
 
-  const res = await post('/api/db/tables', { type, dsn });
+  const res = await post('/api/db/tables', { type, dsn, name });
   if (!ok(res)) {
     listEl.innerHTML = `<div class="empty-state" style="color:var(--danger)">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>

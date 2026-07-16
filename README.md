@@ -12,6 +12,7 @@
 | **Cookie 解析** | 拆解 Cookie 字段；解析 gorilla/securecookie Session，支持带 Secret 验签 |
 | **JWT 解析** | 解码 Header / Payload，时间戳字段自动转可读时间 |
 | **JSON 工具** | 格式化 / 压缩 / 转义 |
+| **微信推文** | Markdown 转微信公众号可粘贴的富文本 HTML，支持模板选择、复制富文本、复制 HTML、导出 HTML |
 | **编码转换** | Base64 / URL 编解码 |
 | **时间 / UUID** | 时间戳互转，批量生成 UUID v4 |
 | **图片生成** | 文生图 / 图生图，支持 OpenAI SDK 路径和 OpenAI-compatible API |

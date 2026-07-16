@@ -1315,11 +1315,71 @@ body.is-resizing-image-workspace .image-workspace-resizer::before {
   background: var(--violet-border);
 }
 
+/* ─── WeChat Markdown Formatter ─────────────────────────────── */
+.wechat-workspace {
+  display: grid;
+  grid-template-columns: minmax(360px, 0.92fr) minmax(420px, 1.08fr);
+  gap: 16px;
+  min-height: calc(100vh - 132px);
+}
+
+.wechat-editor-card,
+.wechat-preview-card {
+  min-width: 0;
+  min-height: 0;
+}
+
+.wechat-markdown-input {
+  min-height: 560px;
+  resize: vertical;
+}
+
+.wechat-preview-shell {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 18px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(45deg, rgba(148, 163, 184, 0.08) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(148, 163, 184, 0.08) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(148, 163, 184, 0.08) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(148, 163, 184, 0.08) 75%),
+    #f8fafc;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+  background-size: 16px 16px;
+}
+
+.wechat-preview {
+  min-height: 560px;
+  max-width: 760px;
+  margin: 0 auto;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.10);
+}
+
+.wechat-preview .empty-state {
+  min-height: 560px;
+}
+
 @media (max-width: 1100px) {
   .image-workspace { grid-template-columns: 1fr; }
   .image-workspace-resizer { display: none; }
   .image-result-grid { grid-template-columns: 1fr; }
   .image-result-card img { height: 280px; }
+
+  .wechat-workspace {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .wechat-markdown-input,
+  .wechat-preview,
+  .wechat-preview .empty-state {
+    min-height: 420px;
+  }
 }
 
 .prompt-area textarea {

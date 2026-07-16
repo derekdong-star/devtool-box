@@ -11,6 +11,7 @@ require (
 	github.com/openai/openai-go v1.12.0
 	github.com/redis/go-redis/v9 v9.18.0
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.73
+	github.com/yuin/goldmark v1.7.8
 )
 
 require (

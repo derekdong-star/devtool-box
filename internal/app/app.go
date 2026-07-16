@@ -24,17 +24,18 @@ func New() *App {
 	handler.NewAuthHandler(auth).Register(mux)
 
 	// 共享连接存储
-	connStore     := service.NewConnStore()
+	connStore := service.NewConnStore()
 	templateStore := service.NewCmdTemplateStore()
 	imageCfgStore := service.NewImageConfigStore()
-	imageSvc      := service.NewImageService(imageCfgStore)
+	imageSvc := service.NewImageService(imageCfgStore)
 	uploadCfgStore := service.NewUploadConfigStore()
-	uploadSvc      := service.NewUploadService(uploadCfgStore)
+	uploadSvc := service.NewUploadService(uploadCfgStore)
 
 	// 功能模块注册：新增模块只需在此追加一行
 	modules := []handler.Handler{
 		handler.NewCookieHandler(),
 		handler.NewJSONHandler(),
+		handler.NewWeChatHandler(),
 		handler.NewCodecHandler(),
 		handler.NewDBHandler(connStore),
 		handler.NewRedisHandler(connStore),

@@ -23,6 +23,25 @@ type JSONFmtReq struct {
 	Mode string `json:"mode"`
 }
 
+// WeChatTheme 微信推文格式模板
+type WeChatTheme struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// WeChatFormatReq Markdown 转微信推文格式请求
+type WeChatFormatReq struct {
+	Markdown string `json:"markdown"`
+	Theme    string `json:"theme"`
+}
+
+// WeChatFormatResp Markdown 转微信推文格式响应
+type WeChatFormatResp struct {
+	HTML     string `json:"html"`
+	FullHTML string `json:"full_html"`
+	Theme    string `json:"theme"`
+}
+
 // CodecReq 编解码请求
 type CodecReq struct {
 	Text string `json:"text"`

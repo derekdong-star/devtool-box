@@ -32,6 +32,7 @@
 - Cookie / Session 解析：Cookie 字段拆解，gorilla/securecookie session 解码
 - JWT 解析
 - JSON 格式化 / 压缩 / 转义
+- 微信推文：Markdown 转微信公众号可粘贴的富文本 HTML，支持模板选择、复制、导出
 - Base64 和 URL 编解码
 - 时间戳与 UUID 工具
 - 图片生成：文生图 / 图生图，支持 OpenAI SDK 和 OpenAI-compatible API

@@ -8,6 +8,7 @@ const TAB_FIELDS = {
   codec:  ['codecInput'],
   time:   ['tsInput'],
   image:  ['imagePrompt', 'imageApiUrl', 'imageApiKey', 'imageModels'],
+  wechat: ['wechatMarkdown'],
 };
 const TAB_STATE_KEY    = 'dtb_tab_state';
 const ACTIVE_TAB_KEY   = 'dtb_active_tab';
@@ -79,6 +80,7 @@ navItems.forEach(item => {
     if (target === 'templates') loadTemplates();
     if (target === 'image')     loadImageConfig();
     if (target === 'upload')    loadUploadConfig();
+    if (target === 'wechat')    loadWeChatThemes();
   });
 });
 

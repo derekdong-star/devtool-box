@@ -778,6 +778,57 @@ code {
 .db-tab-panel { display: none; flex: 1; }
 .db-tab-panel.active { display: flex; }
 
+/* ─── Business Query ─────────────────────────────────────────── */
+.business-query-hero {
+  background:
+    radial-gradient(circle at top right, rgba(var(--cyan-rgb), 0.14), transparent 34%),
+    linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,249,252,0.92));
+}
+
+.business-query-form {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) auto 190px auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.business-query-form input {
+  width: 100%;
+}
+
+.business-query-checkbox {
+  height: 34px;
+  align-items: center;
+  padding: 0 10px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-alt);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.business-query-result {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow: visible;
+}
+
+.business-query-section {
+  min-width: 0;
+}
+
+.business-query-table-wrap {
+  overflow: auto;
+  max-height: 420px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.business-query-table-wrap table {
+  min-width: 920px;
+}
+
 /* 列类型高亮 */
 .col-type {
   display: inline-block;
@@ -1373,6 +1424,10 @@ body.is-resizing-image-workspace .image-workspace-resizer::before {
   .wechat-workspace {
     grid-template-columns: 1fr;
     min-height: auto;
+  }
+
+  .business-query-form {
+    grid-template-columns: 1fr;
   }
 
   .wechat-markdown-input,

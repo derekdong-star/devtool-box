@@ -7,6 +7,7 @@
 | 模块 | 功能 |
 |------|------|
 | **数据库查询** | MySQL / PostgreSQL / SQLite，查看表列表、表结构、执行 SQL；历史连接自动保存并支持自定义名称；SQL 命令历史与模板 |
+| **业务查询** | TokenRouter 用户概览，输入邮箱或 UUID 后聚合查询用户身份、Session、钱包余额、组织信息和组织成员额度；固定使用已保存连接 `tokenrouter-read` |
 | **Redis 查询** | 连接 Redis，前缀搜索 Key，查看各类型 Value，执行任意命令；历史连接自动保存；Redis 命令历史与模板 |
 | **命令模板** | SQL / Redis 常用命令保存为模板，一键回填并自动复制到剪贴板；模板数据后端持久化 |
 | **Cookie 解析** | 拆解 Cookie 字段；解析 gorilla/securecookie Session，支持带 Secret 验签 |
@@ -90,3 +91,5 @@ pkg/response/       # 统一响应格式
 | `upload_config.json` | 腾讯云 COS 上传配置（含 SecretKey） |
 
 已加入 `.gitignore`，不会提交到仓库。本地启动和 Docker 共用同一套数据文件。
+
+业务查询模块依赖 `db_conns.json` 中已有的 PostgreSQL 只读连接，连接名称固定为 `tokenrouter-read`。

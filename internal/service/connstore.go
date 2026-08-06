@@ -71,6 +71,21 @@ func (s *ConnStore) ListByType(connType string) ([]model.DBConn, error) {
 	return result, nil
 }
 
+// FindByName 返回最新保存的同名连接。
+func (s *ConnStore) FindByName(name string) (model.DBConn, bool, error) {
+	all, err := s.List()
+	if err != nil {
+		return model.DBConn{}, false, err
+	}
+	target := strings.TrimSpace(name)
+	for _, c := range all {
+		if strings.TrimSpace(c.Name) == target {
+			return c, true, nil
+		}
+	}
+	return model.DBConn{}, false, nil
+}
+
 // Save 保存一条连接；若已存在相同 type+DSN，则按需更新名称并返回
 func (s *ConnStore) Save(dbType, dsn, name string) (model.DBConn, error) {
 	s.mu.Lock()

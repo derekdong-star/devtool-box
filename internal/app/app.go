@@ -38,6 +38,7 @@ func New() *App {
 		handler.NewWeChatHandler(),
 		handler.NewCodecHandler(),
 		handler.NewDBHandler(connStore),
+		handler.NewBusinessQueryHandler(connStore),
 		handler.NewRedisHandler(connStore),
 		handler.NewConnStoreHandler(connStore),
 		handler.NewCmdTemplateHandler(templateStore),

@@ -9,6 +9,7 @@ const TAB_FIELDS = {
   time:   ['tsInput'],
   image:  ['imagePrompt', 'imageApiUrl', 'imageApiKey', 'imageModels'],
   wechat: ['wechatMarkdown'],
+  'business-query': ['businessQueryIdentifier', 'businessQueryActiveSessionsOnly', 'businessQuerySessionLimit'],
 };
 const TAB_STATE_KEY    = 'dtb_tab_state';
 const ACTIVE_TAB_KEY   = 'dtb_active_tab';
@@ -21,7 +22,7 @@ function saveTabState(tabId) {
     all[tabId] = {};
     fields.forEach(id => {
       const el = document.getElementById(id);
-      if (el) all[tabId][id] = el.value;
+      if (el) all[tabId][id] = el.type === 'checkbox' ? el.checked : el.value;
     });
     localStorage.setItem(TAB_STATE_KEY, JSON.stringify(all));
   } catch {}
@@ -35,7 +36,12 @@ function restoreTabState(tabId) {
     const state = all[tabId] || {};
     fields.forEach(id => {
       const el = document.getElementById(id);
-      if (el && state[id] != null) el.value = state[id];
+      if (!el || state[id] == null) return;
+      if (el.type === 'checkbox') {
+        el.checked = Boolean(state[id]);
+        return;
+      }
+      el.value = state[id];
     });
   } catch {}
 }

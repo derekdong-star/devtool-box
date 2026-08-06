@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"sync"
@@ -70,6 +71,19 @@ func (s *DBService) Query(dbType, dsn, query string) ([]map[string]interface{}, 
 		return nil, err
 	}
 	return s.scanRows(rows)
+}
+
+// QueryContext 执行参数化 SQL，返回列顺序与行数据。
+func (s *DBService) QueryContext(ctx context.Context, dbType, dsn, query string, args ...interface{}) ([]string, []map[string]interface{}, error) {
+	db, err := s.getDB(dbType, dsn)
+	if err != nil {
+		return nil, nil, err
+	}
+	rows, err := db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, nil, err
+	}
+	return s.scanRowsWithColumns(rows)
 }
 
 // ListTables 列出当前数据库所有用户表名
@@ -225,11 +239,16 @@ func (s *DBService) describeSQLite(db *sql.DB, table string) ([]model.ColumnInfo
 
 // scanRows 通用行扫描
 func (s *DBService) scanRows(rows *sql.Rows) ([]map[string]interface{}, error) {
+	_, results, err := s.scanRowsWithColumns(rows)
+	return results, err
+}
+
+func (s *DBService) scanRowsWithColumns(rows *sql.Rows) ([]string, []map[string]interface{}, error) {
 	defer rows.Close()
 
 	cols, err := rows.Columns()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	results := make([]map[string]interface{}, 0)
@@ -240,7 +259,7 @@ func (s *DBService) scanRows(rows *sql.Rows) ([]map[string]interface{}, error) {
 			ptrs[i] = &vals[i]
 		}
 		if err := rows.Scan(ptrs...); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		row := make(map[string]interface{})
 		for i, c := range cols {
@@ -253,5 +272,5 @@ func (s *DBService) scanRows(rows *sql.Rows) ([]map[string]interface{}, error) {
 		}
 		results = append(results, row)
 	}
-	return results, rows.Err()
+	return cols, results, rows.Err()
 }

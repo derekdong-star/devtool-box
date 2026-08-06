@@ -109,6 +109,28 @@ type ColumnInfo struct {
 	Extra    string `json:"extra"`
 }
 
+// BusinessQueryReq 业务查询请求
+type BusinessQueryReq struct {
+	Identifier         string `json:"identifier"`
+	ActiveSessionsOnly bool   `json:"activeSessionsOnly"`
+	RecentSessionLimit int    `json:"recentSessionLimit"`
+}
+
+// BusinessQueryResp 业务查询聚合响应
+type BusinessQueryResp struct {
+	IdentifierType       string                 `json:"identifierType"`
+	NormalizedIdentifier string                 `json:"normalizedIdentifier"`
+	Sections             []BusinessQuerySection `json:"sections"`
+}
+
+// BusinessQuerySection 业务查询结果分组
+type BusinessQuerySection struct {
+	Key     string                   `json:"key"`
+	Title   string                   `json:"title"`
+	Columns []string                 `json:"columns"`
+	Rows    []map[string]interface{} `json:"rows"`
+}
+
 // ── Redis ──────────────────────────────────────────────────────
 
 // RedisConnReq Redis 连接信息

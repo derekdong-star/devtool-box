@@ -27,6 +27,7 @@
 ## 当前模块
 
 - 数据库查询：MySQL / PostgreSQL / SQLite，表列表、表结构、SQL 执行，已保存连接支持自定义名称
+- 业务查询：TokenRouter 用户概览，输入邮箱或 UUID 后聚合查询用户身份、Session、钱包余额、组织信息和组织成员额度；固定使用已保存 PostgreSQL 连接 `tokenrouter-read`
 - Redis 查询：连接、Key 扫描、Value 查看、原始命令执行
 - 命令模板：SQL / Redis 常用命令模板
 - Cookie / Session 解析：Cookie 字段拆解，gorilla/securecookie session 解码
@@ -48,6 +49,8 @@
 - `upload_config.json`：腾讯云 COS 上传配置
 
 这些文件可能包含密钥或连接密码，不能提交到仓库。
+
+业务查询模块不单独保存数据库配置，依赖 `db_conns.json` 中名称为 `tokenrouter-read` 的 PostgreSQL 只读连接。
 
 ## 部署事实
 

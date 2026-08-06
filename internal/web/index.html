@@ -36,6 +36,16 @@
       </div>
       数据库查询
     </div>
+    <div class="nav-item" data-target="business-query" data-desc="TokenRouter 用户、Session、钱包和组织聚合查询">
+      <div class="nav-item-icon">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="8" r="4"/>
+          <path d="M4 21v-2a7 7 0 0 1 14 0v2"/>
+          <path d="M19 8h2M20 7v2"/>
+        </svg>
+      </div>
+      业务查询
+    </div>
     <div class="nav-item" data-target="redis" data-desc="Redis 连接、Key 查询、命令执行">
       <div class="nav-item-icon">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -628,6 +638,45 @@
       </div>
     </div>
 
+    <!-- ── Business Query ────────────────────────────────────── -->
+    <div class="panel" id="business-query">
+      <div class="card business-query-hero">
+        <div class="card-header">
+          <div class="card-icon card-icon-cyan">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="8" r="4"/><path d="M4 21v-2a7 7 0 0 1 14 0v2"/><path d="M19 8h2M20 7v2"/></svg>
+          </div>
+          <span class="card-title">TokenRouter 用户概览</span>
+          <span class="badge badge-neutral" style="margin-left:auto">数据源 tokenrouter-read</span>
+        </div>
+        <div class="business-query-form">
+          <input id="businessQueryIdentifier" type="text" placeholder="输入用户邮箱或用户 UUID，例如 user@example.com" onkeydown="if(event.key==='Enter')runTokenRouterUserOverview()">
+          <label class="checkbox-label business-query-checkbox">
+            <input type="checkbox" id="businessQueryActiveSessionsOnly">
+            仅看有效 Session
+          </label>
+          <select id="businessQuerySessionLimit" title="最近 Session 条数">
+            <option value="20">最近 20 条 Session</option>
+            <option value="50">最近 50 条 Session</option>
+            <option value="100">最近 100 条 Session</option>
+          </select>
+          <button class="btn btn-primary" id="businessQueryRunBtn" onclick="runTokenRouterUserOverview()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            聚合查询
+          </button>
+        </div>
+        <div class="hint">
+          固定读取已保存的 PostgreSQL 连接 <code>tokenrouter-read</code>。不会查询密码哈希、验证码、JWT 或 API Key。
+        </div>
+      </div>
+
+      <div id="businessQueryResult" class="result-area business-query-result">
+        <div class="empty-state">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="8" r="4"/><path d="M4 21v-2a7 7 0 0 1 14 0v2"/><path d="M19 8h2M20 7v2"/></svg>
+          <p>输入邮箱或 UUID 后，聚合展示用户、Session、钱包和组织成员额度</p>
+        </div>
+      </div>
+    </div>
+
     <!-- ── Time / UUID ───────────────────────────────────────── -->
     <div class="panel" id="time">
       <div class="grid-2">
@@ -1037,6 +1086,7 @@ dall-e-2</textarea>
 <script src="/static/js/image.js"></script>
 <script src="/static/js/upload.js"></script>
 <script src="/static/js/wechat.js"></script>
+<script src="/static/js/business-query.js"></script>
 <script src="/static/js/app.js"></script>
 </body>
 </html>
